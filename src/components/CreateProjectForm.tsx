@@ -97,6 +97,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     'live-demo': 'Live Demo'
   };
 
+  // Check if Supabase is properly configured
+  const isSupabaseConfigured = () => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    return supabaseUrl && 
+           supabaseAnonKey && 
+           supabaseUrl !== 'your_supabase_project_url' && 
+           supabaseAnonKey !== 'your_supabase_anon_key' &&
+           supabaseUrl.includes('supabase.co');
+  };
+
   // Generate AI-powered skill suggestions based on project description
   const generateSkillSuggestions = async () => {
     if (!projectDescription || projectDescription.length < 50) return;
@@ -152,7 +164,7 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
           const suggestions = JSON.parse(jsonMatch[0]);
           setAiSuggestedSkills(suggestions);
         }
-      } else {
+      } else if (isSupabaseConfigured()) {
         // Fallback to Supabase edge function
         const supabase = getSupabaseClient();
         const { data, error } = await supabase.functions.invoke('generate-skill-suggestions', {
@@ -161,7 +173,13 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
 
         if (!error && data) {
           setAiSuggestedSkills(data);
+        } else {
+          console.warn('Supabase skill suggestions failed:', error);
+          generateBasicSuggestions();
         }
+      } else {
+        // If Supabase is not configured, use basic suggestions
+        generateBasicSuggestions();
       }
     } catch (err) {
       console.error('Failed to generate skill suggestions:', err);
@@ -260,7 +278,7 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
         console.log('AWS Bedrock analysis successful:', analysisResult);
         setAnalysis(analysisResult);
         generateSkillFeedback(analysisResult);
-      } else {
+      } else if (isSupabaseConfigured()) {
         // Fallback to Supabase edge function
         console.log('Using Supabase edge function for AI analysis...');
         const supabase = getSupabaseClient();
@@ -275,45 +293,113 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
 
         if (error) {
           console.error('Supabase AI analysis error:', error);
-          setAnalysisError(`AI analysis failed: ${error.message}`);
+          setAnalysisError(`AI analysis failed: ${error.message}. Please check your Supabase configuration.`);
+          // Generate fallback analysis
+          generateFallbackAnalysis();
           return;
         }
 
         console.log('Supabase AI analysis successful:', data);
         setAnalysis(data);
         generateSkillFeedback(data);
+      } else {
+        // Generate fallback analysis if no AI service is available
+        console.log('No AI service configured, generating fallback analysis...');
+        generateFallbackAnalysis();
       }
       
     } catch (err) {
       console.error('Analysis request failed:', err);
-      setAnalysisError(`AI analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}. ${!useAWS ? 'Trying fallback method...' : ''}`);
+      setAnalysisError(`AI analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}. Using fallback analysis.`);
       
-      // If AWS fails, try Supabase as fallback
-      if (useAWS && isAWSAvailable()) {
-        try {
-          console.log('AWS failed, trying Supabase fallback...');
-          const supabase = getSupabaseClient();
-          
-          const { data, error } = await supabase.functions.invoke('analyze-project-scope', {
-            body: {
-              projectDescription,
-              projectGoals,
-              targetSkills
-            }
-          });
-
-          if (!error && data) {
-            setAnalysis(data);
-            generateSkillFeedback(data);
-            setAnalysisError(null);
-          }
-        } catch (fallbackError) {
-          console.error('Fallback analysis also failed:', fallbackError);
-        }
-      }
+      // Generate fallback analysis
+      generateFallbackAnalysis();
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  // Generate a basic fallback analysis when AI services are not available
+  const generateFallbackAnalysis = () => {
+    const fallbackAnalysis: ScopeAnalysis = {
+      clarity_score: Math.min(8, Math.floor(projectDescription.length / 50) + 5),
+      feasibility_score: targetSkills.length > 5 ? 7 : 8,
+      identified_risks: [
+        'Project scope may be too broad for effective skill demonstration',
+        'Consider breaking down complex skills into smaller, demonstrable components',
+        'Ensure adequate time allocation for each skill verification'
+      ],
+      suggested_technologies: generateTechSuggestions(projectDescription),
+      detected_skills: targetSkills.map((skill, index) => ({
+        id: `skill_${index}`,
+        name: skill,
+        category: categorizeSkill(skill),
+        proficiency: 'intermediate' as const,
+        demonstrationMethod: getDemoMethod(skill),
+        requirements: `Demonstrate ${skill} through practical implementation and documentation`,
+        aiPrompt: `Show your ${skill} expertise through a well-documented example with clear explanations`
+      })),
+      skill_mapping: targetSkills.map(skill => ({
+        skill,
+        demonstration_method: getDemoMethod(skill),
+        complexity_level: Math.floor(Math.random() * 3) + 2, // 2-4
+        verification_criteria: [
+          `Clear implementation of ${skill}`,
+          'Proper documentation and explanation',
+          'Best practices demonstration'
+        ]
+      }))
+    };
+
+    setAnalysis(fallbackAnalysis);
+    generateSkillFeedback(fallbackAnalysis);
+  };
+
+  // Helper functions for fallback analysis
+  const generateTechSuggestions = (description: string): string[] => {
+    const suggestions = [];
+    const desc = description.toLowerCase();
+    
+    if (desc.includes('web') || desc.includes('website')) {
+      suggestions.push('HTML/CSS', 'JavaScript', 'React');
+    }
+    if (desc.includes('mobile') || desc.includes('app')) {
+      suggestions.push('React Native', 'Flutter');
+    }
+    if (desc.includes('data') || desc.includes('analytics')) {
+      suggestions.push('Python', 'SQL', 'Pandas');
+    }
+    if (desc.includes('api') || desc.includes('backend')) {
+      suggestions.push('Node.js', 'Express', 'PostgreSQL');
+    }
+    
+    return suggestions.length > 0 ? suggestions : ['Git', 'Documentation', 'Testing'];
+  };
+
+  const categorizeSkill = (skill: string): 'technical' | 'soft' | 'language' | 'certification' => {
+    const techSkills = ['react', 'javascript', 'python', 'sql', 'html', 'css', 'node', 'aws'];
+    const softSkills = ['leadership', 'communication', 'management', 'collaboration'];
+    const languages = ['english', 'spanish', 'french', 'german'];
+    
+    const skillLower = skill.toLowerCase();
+    
+    if (techSkills.some(tech => skillLower.includes(tech))) return 'technical';
+    if (softSkills.some(soft => skillLower.includes(soft))) return 'soft';
+    if (languages.some(lang => skillLower.includes(lang))) return 'language';
+    if (skillLower.includes('certified') || skillLower.includes('certification')) return 'certification';
+    
+    return 'technical'; // default
+  };
+
+  const getDemoMethod = (skill: string): 'code' | 'video' | 'documentation' | 'presentation' | 'live-demo' => {
+    const skillLower = skill.toLowerCase();
+    
+    if (skillLower.includes('leadership') || skillLower.includes('communication')) return 'video';
+    if (skillLower.includes('documentation') || skillLower.includes('writing')) return 'documentation';
+    if (skillLower.includes('presentation') || skillLower.includes('speaking')) return 'presentation';
+    if (skillLower.includes('demo') || skillLower.includes('live')) return 'live-demo';
+    
+    return 'code'; // default for technical skills
   };
 
   const generateSkillFeedback = (analysisData: ScopeAnalysis) => {
@@ -364,7 +450,7 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
     }
 
     if (!analysis) {
-      setError('Please wait for AI analysis to complete before creating the project');
+      setError('Please wait for analysis to complete before creating the project');
       return;
     }
 
@@ -372,17 +458,17 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
     setError(null);
 
     try {
-      // Generate a project plan based on the AI analysis
+      // Generate a project plan based on the analysis
       const generateProjectPlan = (skills: ProjectSkill[], description: string): string[] => {
         const plan = [
           `Project Setup: Initialize the ${projectName} project with proper structure and dependencies`,
-          'Requirements Analysis: Define detailed specifications and user stories based on AI recommendations',
+          'Requirements Analysis: Define detailed specifications and user stories based on analysis recommendations',
           'Architecture Design: Plan the system architecture using suggested technologies',
           ...skills.map(skill => `${skill.name} Implementation: ${skill.requirements}`),
           'Integration Testing: Ensure all components work together seamlessly',
-          'AI-Powered Documentation: Create comprehensive project documentation with skill verification evidence',
-          'Quality Assurance: Conduct thorough testing and prepare for AI skill verification',
-          'Deployment & Presentation: Deploy the project and present skill demonstrations for AI analysis'
+          'Documentation: Create comprehensive project documentation with skill verification evidence',
+          'Quality Assurance: Conduct thorough testing and prepare for skill verification',
+          'Deployment & Presentation: Deploy the project and present skill demonstrations for analysis'
         ];
         return plan;
       };
@@ -430,6 +516,16 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
           <p>Define your project and let {useAWS ? 'AWS Bedrock' : 'AI'} analyze the optimal skill demonstration approach</p>
         </div>
       </div>
+
+      {!isSupabaseConfigured() && (
+        <div className="config-warning">
+          <AlertCircle size={20} />
+          <div>
+            <strong>Configuration Required</strong>
+            <p>Please configure your Supabase credentials in the .env file to enable AI-powered features. Using fallback analysis for now.</p>
+          </div>
+        </div>
+      )}
 
       {isAWSAvailable() && (
         <div className="aws-toggle-section">
@@ -801,7 +897,7 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
       case 2:
         return targetSkills.length > 0;
       case 3:
-        return analysis !== null; // Require AI analysis to be complete
+        return analysis !== null; // Require analysis to be complete
       default:
         return false;
     }
