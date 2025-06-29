@@ -59,8 +59,35 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
     <div className="min-h-screen bg-gray-900 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-4">ReelProject</h1>
-          <p className="text-gray-400">AI-powered project management with AWS integration and skill verification</p>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-3xl font-bold text-white">ReelProject</h1>
+            <div className="text-sm text-gray-400">
+              Part of the{' '}
+              <a 
+                href="https://reelapps.co.za" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                ReelApps ecosystem
+              </a>
+            </div>
+          </div>
+          <p className="text-gray-400 mb-4">
+            AI-powered project management with skill verification and professional portfolio building
+          </p>
+          <div className="text-sm text-gray-500">
+            Build your professional portfolio with{' '}
+            <a 
+              href="https://reelapps.co.za/reelcv" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              ReelCV
+            </a>
+            {' '}and showcase your skills with ReelProject
+          </div>
         </div>
 
         <div className="grid gap-6">
@@ -99,17 +126,12 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
                       {project.analysis && (
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-blue-400">
-                            {project.type?.includes('AWS') ? 'AWS' : 'AI'} Score: {project.analysis.clarity_score}/10
+                            AI Score: {project.analysis.clarity_score}/10
                           </span>
                           <span className="text-green-400">
                             {project.skill_demonstrations?.filter((s: any) => s.verified).length || 0} verified skills
                           </span>
                         </div>
-                      )}
-                      {project.type?.includes('AWS') && (
-                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
-                          AWS-Powered
-                        </span>
                       )}
                     </div>
                   </div>
@@ -120,10 +142,73 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
 
           {projects.length === 0 && !showCreateForm && (
             <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
-              <p className="text-gray-400 mb-4">No projects yet. Create your first project to start building your professional portfolio.</p>
+              <p className="text-gray-400 mb-4">
+                No projects yet. Create your first project to start building your professional portfolio.
+              </p>
+              <p className="text-sm text-gray-500">
+                Your verified skills will automatically sync with{' '}
+                <a 
+                  href="https://reelapps.co.za/reelcv" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ReelCV
+                </a>
+                {' '}for a complete professional profile
+              </p>
             </div>
           )}
         </div>
+
+        {/* Footer with ReelApps ecosystem links */}
+        <footer className="mt-12 pt-8 border-t border-gray-700">
+          <div className="text-center">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white mb-2">Explore the ReelApps Ecosystem</h3>
+              <div className="flex flex-wrap justify-center gap-6 text-sm">
+                <a 
+                  href="https://reelapps.co.za/reelcv" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ReelCV - Professional Profiles
+                </a>
+                <a 
+                  href="https://reelapps.co.za/reelpersona" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ReelPersona - Personal Branding
+                </a>
+                <a 
+                  href="https://reelapps.co.za/reeltalent" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ReelTalent - Talent Acquisition
+                </a>
+              </div>
+            </div>
+            <div className="text-xs text-gray-500">
+              <p>
+                Powered by{' '}
+                <a 
+                  href="https://reelapps.co.za" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ReelApps.co.za
+                </a>
+                {' '}- The complete professional development platform
+              </p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
