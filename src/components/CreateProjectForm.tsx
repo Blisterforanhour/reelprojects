@@ -24,7 +24,11 @@ import {
   ArrowRight,
   Lightbulb,
   Users,
-  Cloud
+  Cloud,
+  ChevronDown,
+  ChevronUp,
+  Minimize2,
+  Maximize2
 } from 'lucide-react';
 import { Project } from '../types';
 
@@ -72,29 +76,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [skillFeedback, setSkillFeedback] = useState<{[key: string]: string}>({});
   const [useAWS, setUseAWS] = useState(isAWSAvailable());
-
-  // Real skill suggestions based on industry standards
-  const skillCategories = {
-    technical: [
-      'React', 'Vue.js', 'Angular', 'Node.js', 'Python', 'TypeScript', 'JavaScript',
-      'SQL', 'PostgreSQL', 'MongoDB', 'AWS', 'Docker', 'Kubernetes', 'Git',
-      'REST APIs', 'GraphQL', 'Microservices', 'DevOps', 'CI/CD', 'Testing'
-    ],
-    soft: [
-      'Leadership', 'Communication', 'Problem Solving', 'Project Management', 
-      'Team Collaboration', 'Time Management', 'Critical Thinking', 'Creativity', 
-      'Adaptability', 'Mentoring', 'Conflict Resolution', 'Strategic Planning'
-    ],
-    language: [
-      'English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 
-      'Korean', 'Italian', 'Portuguese', 'Arabic', 'Russian', 'Hindi'
-    ],
-    certification: [
-      'AWS Certified Solutions Architect', 'Google Cloud Professional', 
-      'Microsoft Azure', 'Scrum Master', 'PMP', 'CISSP', 'CompTIA Security+', 
-      'Cisco CCNA', 'Oracle Certified', 'Salesforce Certified'
-    ]
-  };
+  const [aiSuggestedSkills, setAiSuggestedSkills] = useState<{[category: string]: string[]}>({});
+  const [collapsedSkills, setCollapsedSkills] = useState<{[key: string]: boolean}>({});
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
 
   const demonstrationIcons = {
     code: Code,
@@ -103,6 +87,139 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     presentation: Presentation,
     'live-demo': Monitor
   };
+
+  // Generate AI-powered skill suggestions based on project description
+  const generateSkillSuggestions = async () => {
+    if (!projectDescription || projectDescription.length < 50) return;
+
+    setIsGeneratingSuggestions(true);
+    try {
+      if (useAWS && isAWSAvailable()) {
+        // Use AWS Bedrock for skill suggestions
+        const { getBedrockClient } = await import('../lib/aws');
+        const bedrock = getBedrockClient();
+        
+        const prompt = `
+Based on this project description, suggest relevant skills that would be needed and could be demonstrated:
+
+Project: ${projectDescription}
+Goals: ${projectGoals || 'Not specified'}
+
+Please provide skill suggestions in the following JSON format:
+{
+  "technical": [<array of technical skills>],
+  "soft": [<array of soft skills>],
+  "language": [<array of language skills if relevant>],
+  "certification": [<array of relevant certifications>]
+}
+
+Focus on:
+1. Skills directly applicable to this project
+2. Modern, in-demand skills in the relevant industry
+3. Skills that can be practically demonstrated through project work
+4. Both foundational and advanced skills for comprehensive coverage
+
+Limit to 8-10 skills per category, prioritizing the most relevant ones.
+`;
+
+        const { InvokeModelCommand } = await import('@aws-sdk/client-bedrock-runtime');
+        const command = new InvokeModelCommand({
+          modelId: 'anthropic.claude-3-sonnet-20240229-v1:0',
+          contentType: 'application/json',
+          accept: 'application/json',
+          body: JSON.stringify({
+            anthropic_version: 'bedrock-2023-05-31',
+            max_tokens: 2000,
+            messages: [{ role: 'user', content: prompt }],
+          }),
+        });
+
+        const response = await bedrock.send(command);
+        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        const content = responseBody.content[0].text;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        
+        if (jsonMatch) {
+          const suggestions = JSON.parse(jsonMatch[0]);
+          setAiSuggestedSkills(suggestions);
+        }
+      } else {
+        // Fallback to Supabase edge function
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase.functions.invoke('generate-skill-suggestions', {
+          body: { projectDescription, projectGoals }
+        });
+
+        if (!error && data) {
+          setAiSuggestedSkills(data);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to generate skill suggestions:', err);
+      // Fallback to basic suggestions based on keywords
+      generateBasicSuggestions();
+    } finally {
+      setIsGeneratingSuggestions(false);
+    }
+  };
+
+  // Fallback basic suggestions based on keywords
+  const generateBasicSuggestions = () => {
+    const description = projectDescription.toLowerCase();
+    const suggestions: {[category: string]: string[]} = {
+      technical: [],
+      soft: [],
+      language: [],
+      certification: []
+    };
+
+    // Technical skills based on keywords
+    const techKeywords = {
+      'react': ['React', 'JavaScript', 'TypeScript', 'HTML/CSS', 'Redux'],
+      'node': ['Node.js', 'Express.js', 'JavaScript', 'REST APIs', 'MongoDB'],
+      'python': ['Python', 'Django', 'Flask', 'Data Analysis', 'Machine Learning'],
+      'mobile': ['React Native', 'Flutter', 'iOS Development', 'Android Development'],
+      'data': ['SQL', 'PostgreSQL', 'Data Analysis', 'Python', 'Tableau'],
+      'cloud': ['AWS', 'Docker', 'Kubernetes', 'DevOps', 'CI/CD'],
+      'ai': ['Machine Learning', 'Python', 'TensorFlow', 'Data Science', 'Neural Networks']
+    };
+
+    Object.entries(techKeywords).forEach(([keyword, skills]) => {
+      if (description.includes(keyword)) {
+        suggestions.technical.push(...skills);
+      }
+    });
+
+    // Always include relevant soft skills
+    suggestions.soft = [
+      'Problem Solving', 'Project Management', 'Communication', 'Team Collaboration',
+      'Critical Thinking', 'Time Management', 'Adaptability', 'Leadership'
+    ];
+
+    // Basic certifications
+    suggestions.certification = [
+      'AWS Certified Solutions Architect', 'Google Cloud Professional',
+      'Scrum Master', 'PMP', 'CompTIA Security+'
+    ];
+
+    // Remove duplicates and limit
+    Object.keys(suggestions).forEach(category => {
+      suggestions[category] = [...new Set(suggestions[category])].slice(0, 10);
+    });
+
+    setAiSuggestedSkills(suggestions);
+  };
+
+  // Generate suggestions when project description changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (projectDescription.length > 50) {
+        generateSkillSuggestions();
+      }
+    }, 2000); // Debounce for 2 seconds
+
+    return () => clearTimeout(timer);
+  }, [projectDescription, projectGoals]);
 
   // Real-time analysis when project details change
   useEffect(() => {
@@ -220,6 +337,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
   const removeSkill = (skillToRemove: string) => {
     setTargetSkills(targetSkills.filter(skill => skill !== skillToRemove));
+  };
+
+  const toggleSkillCollapse = (skillName: string) => {
+    setCollapsedSkills(prev => ({
+      ...prev,
+      [skillName]: !prev[skillName]
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -433,6 +557,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
               const skillAnalysis = analysis?.detected_skills.find(s => s.name === skill);
               const DemoIcon = skillAnalysis ? (demonstrationIcons as Record<string, React.ComponentType>)[skillAnalysis.demonstrationMethod] || Code : Code;
               const feedback = skillFeedback[skill];
+              const isCollapsed = collapsedSkills[skill];
               
               return (
                 <div key={index} className="skill-card">
@@ -446,12 +571,22 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                         </div>
                       )}
                     </div>
-                    <button type="button" onClick={() => removeSkill(skill)} className="remove-skill">
-                      <X size={14} />
-                    </button>
+                    <div className="skill-actions">
+                      <button 
+                        type="button" 
+                        onClick={() => toggleSkillCollapse(skill)} 
+                        className="collapse-skill"
+                        title={isCollapsed ? 'Expand details' : 'Collapse details'}
+                      >
+                        {isCollapsed ? <Maximize2 size={14} /> : <Minimize2 size={14} />}
+                      </button>
+                      <button type="button" onClick={() => removeSkill(skill)} className="remove-skill">
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                   
-                  {skillAnalysis && (
+                  {!isCollapsed && skillAnalysis && (
                     <div className="skill-details">
                       <div className="skill-requirement">
                         <strong>{useAWS ? 'AWS' : 'AI'} Requirement:</strong> {skillAnalysis.requirements}
@@ -464,7 +599,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                     </div>
                   )}
                   
-                  {feedback && (
+                  {!isCollapsed && feedback && (
                     <div className="skill-feedback">
                       <AlertCircle size={14} />
                       <span>{feedback}</span>
@@ -477,32 +612,45 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
         </div>
       )}
 
-      <div className="skill-suggestions">
-        <h3>Popular Skills by Category</h3>
-        {Object.entries(skillCategories).map(([category, skills]) => (
-          <div key={category} className="skill-category">
-            <h4>{category.charAt(0).toUpperCase() + category.slice(1)} Skills</h4>
-            <div className="suggestion-chips">
-              {skills.slice(0, 8).map(skill => (
-                <button
-                  key={skill}
-                  type="button"
-                  className={`suggestion-chip ${targetSkills.includes(skill) ? 'selected' : ''}`}
-                  onClick={() => {
-                    if (!targetSkills.includes(skill)) {
-                      setTargetSkills([...targetSkills, skill]);
-                    }
-                  }}
-                  disabled={targetSkills.includes(skill)}
-                >
-                  {skill}
-                  {targetSkills.includes(skill) && <CheckCircle size={14} />}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* AI-Generated Skill Suggestions */}
+      {Object.keys(aiSuggestedSkills).length > 0 && (
+        <div className="skill-suggestions">
+          <h3>
+            {useAWS ? <Cloud size={20} /> : <Brain size={20} />}
+            {useAWS ? 'AWS' : 'AI'}-Generated Skill Suggestions
+            {isGeneratingSuggestions && <div className="spinner" style={{ marginLeft: '0.5rem' }}></div>}
+          </h3>
+          <p className="suggestions-description">
+            Based on your project description, here are relevant skills that could be demonstrated:
+          </p>
+          
+          {Object.entries(aiSuggestedSkills).map(([category, skills]) => (
+            skills.length > 0 && (
+              <div key={category} className="skill-category">
+                <h4>{category.charAt(0).toUpperCase() + category.slice(1)} Skills</h4>
+                <div className="suggestion-chips">
+                  {skills.map(skill => (
+                    <button
+                      key={skill}
+                      type="button"
+                      className={`suggestion-chip ${targetSkills.includes(skill) ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (!targetSkills.includes(skill)) {
+                          setTargetSkills([...targetSkills, skill]);
+                        }
+                      }}
+                      disabled={targetSkills.includes(skill)}
+                    >
+                      {skill}
+                      {targetSkills.includes(skill) && <CheckCircle size={14} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+      )}
     </div>
   );
 
