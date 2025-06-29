@@ -2,11 +2,11 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// AWS Configuration
-const AWS_REGION = import.meta.env.VITE_AWS_REGION || 'us-east-1';
+// AWS Configuration - Updated for your existing bucket
+const AWS_REGION = import.meta.env.VITE_AWS_REGION || 'us-west-2';
 const AWS_ACCESS_KEY_ID = import.meta.env.VITE_AWS_ACCESS_KEY_ID;
 const AWS_SECRET_ACCESS_KEY = import.meta.env.VITE_AWS_SECRET_ACCESS_KEY;
-const S3_BUCKET_NAME = import.meta.env.VITE_S3_BUCKET_NAME;
+const S3_BUCKET_NAME = import.meta.env.VITE_S3_BUCKET_NAME || 'reelcv-website-bucket';
 
 // Initialize AWS clients
 let bedrockClient: BedrockRuntimeClient | null = null;
@@ -33,6 +33,7 @@ export const initializeAWS = () => {
     credentials,
   });
 
+  console.log(`AWS initialized with bucket: ${S3_BUCKET_NAME} in region: ${AWS_REGION}`);
   return true;
 };
 
@@ -85,7 +86,7 @@ export const analyzeProjectWithBedrock = async (
   const bedrock = getBedrockClient();
 
   const prompt = `
-You are an AI project analysis expert. Analyze the following project and provide a comprehensive assessment.
+You are an AI project analysis expert for ReelProject, a professional skill verification platform. Analyze the following project and provide a comprehensive assessment for skill demonstration and verification.
 
 Project Description: ${request.projectDescription}
 Project Goals: ${request.projectGoals || 'Not specified'}
@@ -119,14 +120,14 @@ Please provide a detailed analysis in the following JSON format:
 }
 
 Focus on:
-1. Realistic assessment of project clarity and feasibility
-2. Identification of potential risks and challenges
-3. Technology recommendations based on project requirements
-4. Detailed skill analysis with appropriate demonstration methods
-5. AI-powered verification strategies for each skill
-6. Complexity assessment for skill demonstrations
+1. Realistic assessment of project clarity and feasibility for skill demonstration
+2. Identification of potential risks and challenges in skill verification
+3. Technology recommendations that align with modern industry standards
+4. Detailed skill analysis with appropriate demonstration methods for professional portfolios
+5. AI-powered verification strategies that can assess skill competency
+6. Complexity assessment for skill demonstrations suitable for career advancement
 
-Ensure all skills from the target list are included in the analysis.
+Ensure all skills from the target list are included in the analysis with professional-grade verification approaches.
 `;
 
   const command = new InvokeModelCommand({
@@ -170,7 +171,7 @@ Ensure all skills from the target list are included in the analysis.
     };
   } catch (error) {
     console.error('Bedrock analysis error:', error);
-    throw new Error(`AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`AWS Bedrock analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -196,30 +197,31 @@ export const analyzeVideoWithBedrock = async (
   const bedrock = getBedrockClient();
 
   const prompt = `
-You are an AI skill verification expert. Analyze a video demonstration for the skill "${request.skillName}".
+You are an AI skill verification expert for ReelProject, analyzing professional skill demonstrations. Evaluate a video demonstration for the skill "${request.skillName}".
 
 Skill Requirements: ${request.skillRequirements}
 Verification Criteria: ${request.verificationCriteria.join(', ')}
 Video URL: ${request.videoUrl}
 
-Note: Since I cannot directly view the video, I'll provide a simulated analysis based on the skill requirements and criteria. In a real implementation, this would use multimodal AI capabilities.
+Note: This is a simulated analysis based on the skill requirements and criteria. In production, this would integrate with multimodal AI capabilities for actual video content analysis.
 
-Please provide analysis in this JSON format:
+Please provide professional-grade analysis in this JSON format:
 {
   "rating": <number 1-5>,
-  "feedback": "<detailed feedback string>",
+  "feedback": "<detailed professional feedback string>",
   "confidence": <number 0-1>,
   "detected_elements": [<array of detected skill elements>],
-  "improvement_suggestions": [<array of improvement suggestions>]
+  "improvement_suggestions": [<array of constructive improvement suggestions>]
 }
 
 Base the analysis on:
-1. Skill complexity and requirements
-2. Verification criteria provided
-3. Best practices for demonstrating ${request.skillName}
-4. Common areas for improvement in skill demonstrations
+1. Professional skill demonstration standards for ${request.skillName}
+2. Industry best practices and verification criteria provided
+3. Career-relevant competency assessment
+4. Constructive feedback for professional development
+5. Realistic rating based on skill complexity and requirements
 
-Provide constructive feedback and realistic ratings.
+Provide feedback that would be valuable for career advancement and professional portfolio development.
 `;
 
   const command = new InvokeModelCommand({
@@ -253,27 +255,23 @@ Provide constructive feedback and realistic ratings.
     
     return {
       rating: analysisResult.rating || 3,
-      feedback: analysisResult.feedback || 'Analysis completed',
+      feedback: analysisResult.feedback || 'Professional analysis completed',
       confidence: analysisResult.confidence || 0.8,
       detected_elements: analysisResult.detected_elements || [],
       improvement_suggestions: analysisResult.improvement_suggestions || [],
     };
   } catch (error) {
     console.error('Bedrock video analysis error:', error);
-    throw new Error(`Video analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`AWS Bedrock video analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
-// S3 File Upload Functions
+// S3 File Upload Functions - Updated for your bucket structure
 export const uploadFileToS3 = async (
   file: File,
   key: string,
-  folder: string = 'uploads'
+  folder: string = 'reelproject-uploads'
 ): Promise<string> => {
-  if (!S3_BUCKET_NAME) {
-    throw new Error('S3 bucket name not configured');
-  }
-
   const s3 = getS3Client();
   const fullKey = `${folder}/${key}`;
 
@@ -285,6 +283,7 @@ export const uploadFileToS3 = async (
     Metadata: {
       originalName: file.name,
       uploadedAt: new Date().toISOString(),
+      source: 'reelproject',
     },
   });
 
@@ -295,7 +294,7 @@ export const uploadFileToS3 = async (
     return `https://${S3_BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${fullKey}`;
   } catch (error) {
     console.error('S3 upload error:', error);
-    throw new Error(`File upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`AWS S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -304,10 +303,6 @@ export const generatePresignedUrl = async (
   key: string,
   expiresIn: number = 3600
 ): Promise<string> => {
-  if (!S3_BUCKET_NAME) {
-    throw new Error('S3 bucket name not configured');
-  }
-
   const s3 = getS3Client();
 
   const command = new GetObjectCommand({
@@ -320,11 +315,11 @@ export const generatePresignedUrl = async (
     return url;
   } catch (error) {
     console.error('Presigned URL generation error:', error);
-    throw new Error(`URL generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`AWS presigned URL generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
-// Upload video and get analysis
+// Upload video and get analysis - Updated for ReelProject structure
 export const uploadAndAnalyzeVideo = async (
   videoFile: File,
   projectId: string,
@@ -333,9 +328,14 @@ export const uploadAndAnalyzeVideo = async (
   verificationCriteria: string[]
 ): Promise<{ videoUrl: string; analysis: VideoAnalysisResponse }> => {
   try {
-    // Upload video to S3
-    const videoKey = `videos/${projectId}/${Date.now()}-${videoFile.name}`;
-    const videoUrl = await uploadFileToS3(videoFile, videoKey, 'project-videos');
+    // Upload video to S3 with organized structure
+    const timestamp = Date.now();
+    const fileExtension = videoFile.name.split('.').pop();
+    const videoKey = `${projectId}/${timestamp}-${skillName.replace(/\s+/g, '-').toLowerCase()}.${fileExtension}`;
+    
+    const videoUrl = await uploadFileToS3(videoFile, videoKey, 'reelproject-videos');
+
+    console.log(`Video uploaded to AWS S3: ${videoUrl}`);
 
     // Analyze video with Bedrock
     const analysis = await analyzeVideoWithBedrock({
@@ -345,9 +345,11 @@ export const uploadAndAnalyzeVideo = async (
       verificationCriteria,
     });
 
+    console.log(`AWS Bedrock analysis completed for ${skillName}`);
+
     return { videoUrl, analysis };
   } catch (error) {
-    console.error('Upload and analysis error:', error);
+    console.error('AWS upload and analysis error:', error);
     throw error;
   }
 };
@@ -355,6 +357,15 @@ export const uploadAndAnalyzeVideo = async (
 // Utility function to check AWS availability
 export const isAWSAvailable = (): boolean => {
   return !!(AWS_ACCESS_KEY_ID && AWS_SECRET_ACCESS_KEY && S3_BUCKET_NAME);
+};
+
+// Get current AWS configuration info
+export const getAWSConfig = () => {
+  return {
+    region: AWS_REGION,
+    bucket: S3_BUCKET_NAME,
+    available: isAWSAvailable(),
+  };
 };
 
 // Initialize AWS on module load
