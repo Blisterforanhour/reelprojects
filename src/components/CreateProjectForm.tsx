@@ -431,7 +431,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
           <div className="skills-grid">
             {targetSkills.map((skill, index) => {
               const skillAnalysis = analysis?.detected_skills.find(s => s.name === skill);
-              const DemoIcon = skillAnalysis ? demonstrationIcons[skillAnalysis.demonstrationMethod] : Code;
+              const DemoIcon = skillAnalysis ? (demonstrationIcons as Record<string, React.ComponentType>)[skillAnalysis.demonstrationMethod] || Code : Code;
               const feedback = skillFeedback[skill];
               
               return (
@@ -539,7 +539,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             <h3>{useAWS ? 'AWS-Powered' : 'AI-Powered'} Skill Verification Plan</h3>
             <div className="verification-grid">
               {analysis.detected_skills.map((skill, index) => {
-                const DemoIcon = demonstrationIcons[skill.demonstrationMethod];
+                const DemoIcon = (demonstrationIcons as Record<string, React.ComponentType>)[skill.demonstrationMethod] || Code;
                 const mapping = analysis.skill_mapping.find(m => m.skill === skill.name);
                 
                 return (

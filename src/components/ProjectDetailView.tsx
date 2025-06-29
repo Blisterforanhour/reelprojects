@@ -439,7 +439,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
   };
 
   const renderSkillCard = (skill: ProjectSkill) => {
-    const IconComponent = demonstrationIcons[skill.demonstrationMethod];
+    const IconComponent = (demonstrationIcons as Record<string, React.ComponentType>)[skill.demonstrationMethod] || Code;
     const StatusIcon = getStatusIcon(skill.status || 'planned');
     
     return (
