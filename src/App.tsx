@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
-import { useAuthStore, initializeSupabase } from '@reelapps/auth'
-import { AppWrapper } from '@reelapps/ui'
+import { useAuthStore, initializeSupabase } from './lib/auth'
+import { AppWrapper } from './components/AppWrapper'
 import CreateProjectForm from './components/CreateProjectForm'
 import ProjectDetailView from './components/ProjectDetailView'
 import './App.css'
@@ -39,19 +39,19 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
   };
 
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen bg-gray-900 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text-primary mb-4">ReelProject</h1>
-          <p className="text-text-secondary">Collaborative project management for modern teams</p>
+          <h1 className="text-3xl font-bold text-white mb-4">ReelProject</h1>
+          <p className="text-gray-400">Collaborative project management for modern teams</p>
         </div>
 
         <div className="grid gap-6">
           {!showCreateForm ? (
-            <div className="bg-surface rounded-lg border border-surface p-6">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
               <button 
                 onClick={() => setShowCreateForm(true)}
-                className="w-full p-4 border-2 border-dashed border-surface-hover rounded-lg hover:bg-surface-hover transition-colors text-text-secondary hover:text-text-primary"
+                className="w-full p-4 border-2 border-dashed border-gray-600 rounded-lg hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
               >
                 + Create New Project
               </button>
@@ -64,18 +64,18 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
           )}
           
           {projects.length > 0 && (
-            <div className="bg-surface rounded-lg border border-surface p-6">
-              <h2 className="text-xl font-semibold text-text-primary mb-4">Your Projects</h2>
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+              <h2 className="text-xl font-semibold text-white mb-4">Your Projects</h2>
               <div className="space-y-4">
                 {projects.map((project) => (
                   <div 
                     key={project.id}
-                    className="p-4 border border-surface rounded-lg hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="p-4 border border-gray-700 rounded-lg hover:bg-gray-700 cursor-pointer transition-colors"
                     onClick={() => handleProjectClick(project)}
                   >
-                    <h3 className="font-semibold text-text-primary">{project.name}</h3>
-                    <p className="text-text-secondary text-sm">{project.description}</p>
-                    <p className="text-text-tertiary text-xs mt-2">
+                    <h3 className="font-semibold text-white">{project.name}</h3>
+                    <p className="text-gray-400 text-sm">{project.description}</p>
+                    <p className="text-gray-500 text-xs mt-2">
                       Created: {new Date(project.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -132,10 +132,8 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-        if (!supabaseUrl || !supabaseAnonKey) throw new Error('Missing Supabase env');
-        initializeSupabase(supabaseUrl, supabaseAnonKey);
+        // Mock Supabase initialization
+        initializeSupabase('mock-url', 'mock-key');
         await initialize();
       } catch (error) {
         setInitError(error instanceof Error ? error.message : 'Init error');
@@ -148,10 +146,10 @@ function App() {
 
   if (localInitializing || isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-text-secondary">Loading ReelProject...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading ReelProject...</p>
         </div>
       </div>
     );
