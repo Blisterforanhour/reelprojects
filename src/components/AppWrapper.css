@@ -45,7 +45,7 @@
 }
 
 .signup-container {
-  max-width: 42rem;
+  max-width: 44rem;
 }
 
 .auth-header {
@@ -84,7 +84,8 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  min-width: 0; /* Prevent overflow */
+  min-width: 0;
+  width: 100%;
 }
 
 .form-label {
@@ -177,6 +178,8 @@
   margin-top: 0.25rem;
   display: block;
   line-height: 1.2;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .password-requirements {
@@ -187,6 +190,8 @@
   color: #6B7280;
   font-size: 0.75rem;
   line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .checkbox-container {
@@ -194,6 +199,8 @@
   align-items: flex-start;
   gap: 0.75rem;
   width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .form-checkbox {
@@ -205,6 +212,7 @@
   cursor: pointer;
   margin-top: 0.125rem;
   flex-shrink: 0;
+  min-width: 1rem;
 }
 
 .form-checkbox:checked {
@@ -219,16 +227,22 @@
 .checkbox-label {
   color: #9CA3AF;
   font-size: 0.875rem;
-  line-height: 1.4;
+  line-height: 1.5;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
 }
 
 .terms-link {
   color: #3B82F6;
   text-decoration: none;
   transition: color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .terms-link:hover {
@@ -247,6 +261,7 @@
   align-items: center;
   gap: 0.5rem;
   word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .submit-button {
@@ -307,6 +322,8 @@
   transition: color 0.2s ease;
   padding: 0.25rem;
   line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .auth-link:hover {
@@ -370,10 +387,22 @@
   .password-input {
     padding-right: 3rem;
   }
+
+  .checkbox-container {
+    gap: 0.5rem;
+  }
+
+  .checkbox-label {
+    font-size: 0.8125rem;
+  }
 }
 
 @media (max-width: 640px) {
   .auth-container {
+    padding: 1rem;
+  }
+
+  .signup-container {
     padding: 1rem;
   }
 
@@ -394,6 +423,11 @@
     gap: 0.5rem;
   }
 
+  .checkbox-label {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+  }
+
   .auth-title {
     font-size: 1.25rem;
   }
@@ -411,6 +445,10 @@
   .auth-container {
     padding: 0.75rem;
     border-radius: 8px;
+  }
+
+  .signup-container {
+    padding: 0.75rem;
   }
 
   .form-input {
@@ -434,8 +472,19 @@
     font-size: 0.8125rem;
   }
 
+  .checkbox-container {
+    gap: 0.5rem;
+  }
+
   .checkbox-label {
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+
+  .form-checkbox {
+    width: 0.875rem;
+    height: 0.875rem;
+    min-width: 0.875rem;
   }
 }
 
@@ -488,22 +537,41 @@
   }
 }
 
-/* Text overflow prevention */
+/* Text overflow prevention for all elements */
 .form-input,
 .form-label,
 .checkbox-label,
 .field-error,
-.password-requirements small {
+.password-requirements small,
+.terms-link,
+.auth-link,
+.error-message {
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
 }
 
 /* Ensure proper spacing and prevent content overflow */
-.auth-form > * {
+.auth-form > *,
+.form-group > *,
+.checkbox-container > * {
   min-width: 0;
+  max-width: 100%;
 }
 
-.form-group > * {
-  min-width: 0;
+/* Additional container constraints */
+.auth-container * {
+  box-sizing: border-box;
+}
+
+/* Specific fix for checkbox section */
+.form-group:has(.checkbox-container) {
+  width: 100%;
+  overflow: hidden;
+}
+
+.checkbox-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
