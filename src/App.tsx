@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
 import { useAuthStore, initializeSupabase } from './lib/auth'
+import { initializeAWS } from './lib/aws'
 import { AppWrapper } from './components/AppWrapper'
 import CreateProjectForm from './components/CreateProjectForm'
 import ProjectDetailView from './components/ProjectDetailView'
@@ -42,7 +43,7 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-4">ReelProject</h1>
-          <p className="text-gray-400">AI-powered project management and skill verification</p>
+          <p className="text-gray-400">AI-powered project management with AWS integration and skill verification</p>
         </div>
 
         <div className="grid gap-6">
@@ -80,9 +81,18 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
                       </p>
                       {project.analysis && (
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-blue-400">AI Score: {project.analysis.clarity_score}/10</span>
-                          <span className="text-green-400">{project.skill_demonstrations?.filter((s: any) => s.verified).length || 0} verified skills</span>
+                          <span className="text-blue-400">
+                            {project.type?.includes('AWS') ? 'AWS' : 'AI'} Score: {project.analysis.clarity_score}/10
+                          </span>
+                          <span className="text-green-400">
+                            {project.skill_demonstrations?.filter((s: any) => s.verified).length || 0} verified skills
+                          </span>
                         </div>
+                      )}
+                      {project.type?.includes('AWS') && (
+                        <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">
+                          AWS-Powered
+                        </span>
                       )}
                     </div>
                   </div>
@@ -146,8 +156,18 @@ function App() {
           throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
         }
         
+        // Initialize Supabase
         initializeSupabase(supabaseUrl, supabaseAnonKey);
         await initialize();
+
+        // Initialize AWS (optional)
+        const awsInitialized = initializeAWS();
+        if (awsInitialized) {
+          console.log('AWS services initialized successfully');
+        } else {
+          console.log('AWS services not available - using Supabase only');
+        }
+        
       } catch (error) {
         console.error('Initialization error:', error);
         setInitError(error instanceof Error ? error.message : 'Init error');

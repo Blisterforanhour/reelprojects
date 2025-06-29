@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import './CreateProjectForm.css';
 import { getSupabaseClient } from '../lib/auth';
+import { analyzeProjectWithBedrock, isAWSAvailable } from '../lib/aws';
 import { 
   Plus, 
   X, 
@@ -22,7 +23,8 @@ import {
   Eye,
   ArrowRight,
   Lightbulb,
-  Users
+  Users,
+  Cloud
 } from 'lucide-react';
 import { Project } from '../types';
 
@@ -69,6 +71,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
   const [error, setError] = useState<string | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [skillFeedback, setSkillFeedback] = useState<{[key: string]: string}>({});
+  const [useAWS, setUseAWS] = useState(isAWSAvailable());
 
   const skillCategories = {
     technical: ['React', 'Node.js', 'Python', 'TypeScript', 'SQL', 'MongoDB', 'AWS', 'Docker', 'Git', 'JavaScript'],
@@ -103,30 +106,69 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     setAnalysisError(null);
 
     try {
-      const supabase = getSupabaseClient();
-      
-      console.log('Calling AI analysis edge function...');
-      const { data, error } = await supabase.functions.invoke('analyze-project-scope', {
-        body: {
+      if (useAWS && isAWSAvailable()) {
+        // Use AWS Bedrock for analysis
+        console.log('Using AWS Bedrock for AI analysis...');
+        const analysisResult = await analyzeProjectWithBedrock({
           projectDescription,
           projectGoals,
           targetSkills
+        });
+
+        console.log('AWS Bedrock analysis successful:', analysisResult);
+        setAnalysis(analysisResult);
+        generateSkillFeedback(analysisResult);
+      } else {
+        // Fallback to Supabase edge function
+        console.log('Using Supabase edge function for AI analysis...');
+        const supabase = getSupabaseClient();
+        
+        const { data, error } = await supabase.functions.invoke('analyze-project-scope', {
+          body: {
+            projectDescription,
+            projectGoals,
+            targetSkills
+          }
+        });
+
+        if (error) {
+          console.error('Supabase AI analysis error:', error);
+          setAnalysisError(`AI analysis failed: ${error.message}`);
+          return;
         }
-      });
 
-      if (error) {
-        console.error('AI analysis error:', error);
-        setAnalysisError(`AI analysis failed: ${error.message}`);
-        return;
+        console.log('Supabase AI analysis successful:', data);
+        setAnalysis(data);
+        generateSkillFeedback(data);
       }
-
-      console.log('AI analysis successful:', data);
-      setAnalysis(data);
-      generateSkillFeedback(data);
       
     } catch (err) {
       console.error('Analysis request failed:', err);
-      setAnalysisError('Failed to connect to AI analysis service. Please check your connection and try again.');
+      setAnalysisError(`AI analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}. ${!useAWS ? 'Trying fallback method...' : ''}`);
+      
+      // If AWS fails, try Supabase as fallback
+      if (useAWS && isAWSAvailable()) {
+        try {
+          console.log('AWS failed, trying Supabase fallback...');
+          const supabase = getSupabaseClient();
+          
+          const { data, error } = await supabase.functions.invoke('analyze-project-scope', {
+            body: {
+              projectDescription,
+              projectGoals,
+              targetSkills
+            }
+          });
+
+          if (!error && data) {
+            setAnalysis(data);
+            generateSkillFeedback(data);
+            setAnalysisError(null);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback analysis also failed:', fallbackError);
+        }
+      }
     } finally {
       setIsAnalyzing(false);
     }
@@ -214,10 +256,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
         })),
         status: 'active',
         created_at: new Date().toISOString(),
-        type: 'AI-Powered Multi-Skill Showcase'
+        type: useAWS ? 'AWS-Powered Multi-Skill Showcase' : 'AI-Powered Multi-Skill Showcase'
       };
 
-      console.log('AI-powered project created:', newProject);
+      console.log(`${useAWS ? 'AWS' : 'AI'}-powered project created:`, newProject);
       onProjectCreated(newProject);
 
     } catch (err) {
@@ -234,10 +276,35 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       <div className="step-header">
         <Brain className="step-icon" size={24} />
         <div>
-          <h2>AI-Powered Project Setup</h2>
-          <p>Define your project and let AI analyze the optimal skill demonstration approach</p>
+          <h2>{useAWS ? 'AWS-Powered' : 'AI-Powered'} Project Setup</h2>
+          <p>Define your project and let {useAWS ? 'AWS Bedrock' : 'AI'} analyze the optimal skill demonstration approach</p>
         </div>
       </div>
+
+      {isAWSAvailable() && (
+        <div className="aws-toggle-section">
+          <div className="aws-toggle-container">
+            <div className="toggle-info">
+              <Cloud size={20} />
+              <div>
+                <span className="toggle-label">Use AWS Bedrock for AI Analysis</span>
+                <small className="toggle-description">
+                  Enhanced AI capabilities with AWS Bedrock and S3 storage
+                </small>
+              </div>
+            </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={useAWS}
+                onChange={(e) => setUseAWS(e.target.checked)}
+                disabled={isLoading || isAnalyzing}
+              />
+              <span className="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      )}
 
       <div className="form-group">
         <label htmlFor="projectName">Project Name *</label>
@@ -258,7 +325,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
           id="projectDescription"
           value={projectDescription}
           onChange={(e) => setProjectDescription(e.target.value)}
-          placeholder="Describe what you're building, its purpose, key features, and target users. Be specific about the problems it solves. AI will analyze this to suggest optimal skill demonstrations."
+          placeholder={`Describe what you're building, its purpose, key features, and target users. Be specific about the problems it solves. ${useAWS ? 'AWS Bedrock' : 'AI'} will analyze this to suggest optimal skill demonstrations.`}
           required
           disabled={isLoading}
           rows={4}
@@ -274,7 +341,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
           id="projectGoals"
           value={projectGoals}
           onChange={(e) => setProjectGoals(e.target.value)}
-          placeholder="What specific outcomes do you want to achieve? How will you measure success? AI will use this to optimize skill verification strategies."
+          placeholder={`What specific outcomes do you want to achieve? How will you measure success? ${useAWS ? 'AWS Bedrock' : 'AI'} will use this to optimize skill verification strategies.`}
           disabled={isLoading}
           rows={3}
         />
@@ -285,13 +352,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
           {isAnalyzing ? (
             <div className="analyzing-indicator">
               <div className="spinner"></div>
-              <span>AI is analyzing your project for optimal skill demonstration...</span>
+              <span>{useAWS ? 'AWS Bedrock' : 'AI'} is analyzing your project for optimal skill demonstration...</span>
             </div>
           ) : analysis ? (
             <div className="analysis-preview">
               <div className="analysis-scores">
                 <div className="score-item">
-                  <span>AI Clarity Score</span>
+                  <span>{useAWS ? 'AWS' : 'AI'} Clarity Score</span>
                   <span className="score">{analysis.clarity_score}/10</span>
                 </div>
                 <div className="score-item">
@@ -301,7 +368,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
               </div>
               <div className="quick-insights">
                 <Lightbulb size={16} />
-                <span>AI detected {analysis.detected_skills.length} skills and generated verification strategies</span>
+                <span>{useAWS ? 'AWS Bedrock' : 'AI'} detected {analysis.detected_skills.length} skills and generated verification strategies</span>
               </div>
             </div>
           ) : analysisError ? (
@@ -320,8 +387,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       <div className="step-header">
         <Target className="step-icon" size={24} />
         <div>
-          <h2>AI-Enhanced Skill Selection</h2>
-          <p>Select skills for AI-powered verification and automated demonstration planning</p>
+          <h2>{useAWS ? 'AWS-Enhanced' : 'AI-Enhanced'} Skill Selection</h2>
+          <p>Select skills for {useAWS ? 'AWS Bedrock' : 'AI'}-powered verification and automated demonstration planning</p>
         </div>
       </div>
       
@@ -331,7 +398,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             type="text"
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
-            placeholder="Add a skill for AI analysis (e.g., React, Leadership, UI Design)"
+            placeholder={`Add a skill for ${useAWS ? 'AWS' : 'AI'} analysis (e.g., React, Leadership, UI Design)`}
             disabled={isLoading}
             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
           />
@@ -343,7 +410,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
       {targetSkills.length > 0 && (
         <div className="selected-skills">
-          <h3>AI-Analyzed Skills ({targetSkills.length})</h3>
+          <h3>{useAWS ? 'AWS' : 'AI'}-Analyzed Skills ({targetSkills.length})</h3>
           <div className="skills-grid">
             {targetSkills.map((skill, index) => {
               const skillAnalysis = analysis?.detected_skills.find(s => s.name === skill);
@@ -358,7 +425,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                       {skillAnalysis && (
                         <div className="demo-method">
                           <DemoIcon size={14} />
-                          <span>AI: {skillAnalysis.demonstrationMethod}</span>
+                          <span>{useAWS ? 'AWS' : 'AI'}: {skillAnalysis.demonstrationMethod}</span>
                         </div>
                       )}
                     </div>
@@ -370,11 +437,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                   {skillAnalysis && (
                     <div className="skill-details">
                       <div className="skill-requirement">
-                        <strong>AI Requirement:</strong> {skillAnalysis.requirements}
+                        <strong>{useAWS ? 'AWS' : 'AI'} Requirement:</strong> {skillAnalysis.requirements}
                       </div>
                       {skillAnalysis.aiPrompt && (
                         <div className="ai-prompt">
-                          <strong>AI Verification Strategy:</strong> {skillAnalysis.aiPrompt}
+                          <strong>{useAWS ? 'AWS' : 'AI'} Verification Strategy:</strong> {skillAnalysis.aiPrompt}
                         </div>
                       )}
                     </div>
@@ -427,8 +494,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       <div className="step-header">
         <Users className="step-icon" size={24} />
         <div>
-          <h2>AI Analysis & Verification Plan</h2>
-          <p>Review AI-generated skill verification strategies and project insights</p>
+          <h2>{useAWS ? 'AWS Bedrock' : 'AI'} Analysis & Verification Plan</h2>
+          <p>Review {useAWS ? 'AWS Bedrock' : 'AI'}-generated skill verification strategies and project insights</p>
         </div>
       </div>
 
@@ -438,7 +505,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             <div className="analysis-scores">
               <div className="score-card">
                 <div className="score-number">{analysis.clarity_score}</div>
-                <div className="score-label">AI Clarity Score</div>
+                <div className="score-label">{useAWS ? 'AWS' : 'AI'} Clarity Score</div>
               </div>
               <div className="score-card">
                 <div className="score-number">{analysis.feasibility_score}</div>
@@ -446,13 +513,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
               </div>
               <div className="score-card">
                 <div className="score-number">{analysis.detected_skills.length}</div>
-                <div className="score-label">AI-Analyzed Skills</div>
+                <div className="score-label">{useAWS ? 'AWS' : 'AI'}-Analyzed Skills</div>
               </div>
             </div>
           </div>
 
           <div className="skills-verification-plan">
-            <h3>AI-Powered Skill Verification Plan</h3>
+            <h3>{useAWS ? 'AWS-Powered' : 'AI-Powered'} Skill Verification Plan</h3>
             <div className="verification-grid">
               {analysis.detected_skills.map((skill, index) => {
                 const DemoIcon = demonstrationIcons[skill.demonstrationMethod];
@@ -472,7 +539,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                     
                     <div className="verification-details">
                       <div className="complexity-level">
-                        <span>AI Complexity:</span>
+                        <span>{useAWS ? 'AWS' : 'AI'} Complexity:</span>
                         <div className="complexity-stars">
                           {[...Array(5)].map((_, i) => (
                             <Star 
@@ -485,11 +552,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                       </div>
                       
                       <div className="demonstration-method">
-                        <strong>AI Method:</strong> {skill.demonstrationMethod.replace('-', ' ')}
+                        <strong>{useAWS ? 'AWS' : 'AI'} Method:</strong> {skill.demonstrationMethod.replace('-', ' ')}
                       </div>
                       
                       <div className="verification-criteria">
-                        <strong>AI Verification Criteria:</strong>
+                        <strong>{useAWS ? 'AWS' : 'AI'} Verification Criteria:</strong>
                         <ul>
                           {mapping?.verification_criteria.slice(0, 3).map((criteria, i) => (
                             <li key={i}>{criteria}</li>
@@ -505,7 +572,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
           {analysis.identified_risks.length > 0 && (
             <div className="risks-section">
-              <h3>AI-Identified Risks & Considerations</h3>
+              <h3>{useAWS ? 'AWS' : 'AI'}-Identified Risks & Considerations</h3>
               <div className="risks-list">
                 {analysis.identified_risks.map((risk, index) => (
                   <div key={index} className="risk-item">
@@ -519,7 +586,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
           {analysis.suggested_technologies.length > 0 && (
             <div className="technologies-section">
-              <h3>AI-Suggested Technologies & Tools</h3>
+              <h3>{useAWS ? 'AWS' : 'AI'}-Suggested Technologies & Tools</h3>
               <div className="tech-list">
                 {analysis.suggested_technologies.map((tech, index) => (
                   <div key={index} className="tech-item">
@@ -534,8 +601,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       ) : (
         <div className="no-analysis">
           <Brain size={48} />
-          <h3>No AI Analysis Available</h3>
-          <p>Complete the previous steps to see AI-powered analysis and verification strategies</p>
+          <h3>No {useAWS ? 'AWS' : 'AI'} Analysis Available</h3>
+          <p>Complete the previous steps to see {useAWS ? 'AWS Bedrock' : 'AI'}-powered analysis and verification strategies</p>
         </div>
       )}
     </div>
@@ -570,7 +637,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     <div className="create-project-modal">
       <div className="modal-content">
         <div className="modal-header">
-          <h1>Create AI-Powered Project</h1>
+          <h1>Create {useAWS ? 'AWS-Powered' : 'AI-Powered'} Project</h1>
           <button onClick={onClose} className="close-btn">
             <X size={24} />
           </button>
@@ -581,9 +648,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             <div key={step} className={`step ${currentStep >= step ? 'active' : ''}`}>
               <div className="step-number">{step}</div>
               <div className="step-text">
-                {step === 1 && 'AI Setup'}
+                {step === 1 && `${useAWS ? 'AWS' : 'AI'} Setup`}
                 {step === 2 && 'Skills'}
-                {step === 3 && 'AI Review'}
+                {step === 3 && `${useAWS ? 'AWS' : 'AI'} Review`}
               </div>
             </div>
           ))}
@@ -620,7 +687,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                   {isAnalyzing ? (
                     <>
                       <div className="spinner"></div>
-                      AI Analyzing...
+                      {useAWS ? 'AWS' : 'AI'} Analyzing...
                     </>
                   ) : (
                     <>
@@ -638,11 +705,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                   {isLoading ? (
                     <>
                       <div className="spinner"></div>
-                      Creating AI Project...
+                      Creating {useAWS ? 'AWS' : 'AI'} Project...
                     </>
                   ) : (
                     <>
-                      Create AI Project
+                      Create {useAWS ? 'AWS' : 'AI'} Project
                       <ArrowRight size={16} />
                     </>
                   )}
