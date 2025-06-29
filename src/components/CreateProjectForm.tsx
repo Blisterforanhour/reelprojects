@@ -28,7 +28,8 @@ import {
   ChevronDown,
   ChevronUp,
   Minimize2,
-  Maximize2
+  Maximize2,
+  Search
 } from 'lucide-react';
 import { Project } from '../types';
 
@@ -86,6 +87,14 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     documentation: FileText,
     presentation: Presentation,
     'live-demo': Monitor
+  };
+
+  const demonstrationLabels = {
+    code: 'Code Repository',
+    video: 'Video Demo',
+    documentation: 'Documentation',
+    presentation: 'Presentation',
+    'live-demo': 'Live Demo'
   };
 
   // Generate AI-powered skill suggestions based on project description
@@ -534,24 +543,76 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
       </div>
       
       <div className="skill-input-section">
-        <div className="skill-input-container">
-          <input
-            type="text"
-            value={newSkill}
-            onChange={(e) => setNewSkill(e.target.value)}
-            placeholder={`Add a skill for ${useAWS ? 'AWS' : 'AI'} analysis (e.g., React, Leadership, UI Design)`}
-            disabled={isLoading}
-            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
-          />
-          <button type="button" onClick={addSkill} disabled={!newSkill.trim()} className="add-skill-btn">
-            <Plus size={16} />
-          </button>
+        <div className="skill-search-container">
+          <div className="search-input-wrapper">
+            <Search className="search-icon" size={20} />
+            <input
+              type="text"
+              value={newSkill}
+              onChange={(e) => setNewSkill(e.target.value)}
+              placeholder={`Add a skill for ${useAWS ? 'AWS' : 'AI'} analysis (e.g., React, Leadership, UI Design)`}
+              disabled={isLoading}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+              className="skill-search-input"
+            />
+            <button 
+              type="button" 
+              onClick={addSkill} 
+              disabled={!newSkill.trim()} 
+              className="add-skill-btn"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* AI-Generated Skill Suggestions - Now at the top */}
+      {Object.keys(aiSuggestedSkills).length > 0 && (
+        <div className="skill-suggestions">
+          <h3 className="suggestions-header">
+            {useAWS ? <Cloud size={20} /> : <Brain size={20} />}
+            {useAWS ? 'AWS' : 'AI'}-Generated Skill Suggestions
+            {isGeneratingSuggestions && <div className="spinner suggestions-spinner"></div>}
+          </h3>
+          <p className="suggestions-description">
+            Based on your project description, here are relevant skills that could be demonstrated:
+          </p>
+          
+          {Object.entries(aiSuggestedSkills).map(([category, skills]) => (
+            skills.length > 0 && (
+              <div key={category} className="skill-category">
+                <h4 className="category-title">{category.charAt(0).toUpperCase() + category.slice(1)} Skills</h4>
+                <div className="suggestion-chips">
+                  {skills.map(skill => (
+                    <button
+                      key={skill}
+                      type="button"
+                      className={`suggestion-chip ${targetSkills.includes(skill) ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (!targetSkills.includes(skill)) {
+                          setTargetSkills([...targetSkills, skill]);
+                        }
+                      }}
+                      disabled={targetSkills.includes(skill)}
+                    >
+                      {skill}
+                      {targetSkills.includes(skill) && <CheckCircle size={14} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          ))}
+        </div>
+      )}
+
+      {/* AI-Analyzed Skills - Now below suggestions */}
       {targetSkills.length > 0 && (
         <div className="selected-skills">
-          <h3>{useAWS ? 'AWS' : 'AI'}-Analyzed Skills ({targetSkills.length})</h3>
+          <h3 className="analyzed-skills-header">
+            {useAWS ? 'AWS' : 'AI'}-Analyzed Skills ({targetSkills.length})
+          </h3>
           <div className="skills-grid">
             {targetSkills.map((skill, index) => {
               const skillAnalysis = analysis?.detected_skills.find(s => s.name === skill);
@@ -609,46 +670,6 @@ Limit to 8-10 skills per category, prioritizing the most relevant ones.
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* AI-Generated Skill Suggestions */}
-      {Object.keys(aiSuggestedSkills).length > 0 && (
-        <div className="skill-suggestions">
-          <h3>
-            {useAWS ? <Cloud size={20} /> : <Brain size={20} />}
-            {useAWS ? 'AWS' : 'AI'}-Generated Skill Suggestions
-            {isGeneratingSuggestions && <div className="spinner" style={{ marginLeft: '0.5rem' }}></div>}
-          </h3>
-          <p className="suggestions-description">
-            Based on your project description, here are relevant skills that could be demonstrated:
-          </p>
-          
-          {Object.entries(aiSuggestedSkills).map(([category, skills]) => (
-            skills.length > 0 && (
-              <div key={category} className="skill-category">
-                <h4>{category.charAt(0).toUpperCase() + category.slice(1)} Skills</h4>
-                <div className="suggestion-chips">
-                  {skills.map(skill => (
-                    <button
-                      key={skill}
-                      type="button"
-                      className={`suggestion-chip ${targetSkills.includes(skill) ? 'selected' : ''}`}
-                      onClick={() => {
-                        if (!targetSkills.includes(skill)) {
-                          setTargetSkills([...targetSkills, skill]);
-                        }
-                      }}
-                      disabled={targetSkills.includes(skill)}
-                    >
-                      {skill}
-                      {targetSkills.includes(skill) && <CheckCircle size={14} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )
-          ))}
         </div>
       )}
     </div>
