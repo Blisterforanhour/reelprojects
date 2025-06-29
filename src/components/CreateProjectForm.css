@@ -663,219 +663,122 @@
   margin-bottom: 1.5rem;
 }
 
-/* PROFESSIONAL FORM ACTIONS - Modern Navigation Buttons */
+/* CLEAN MINIMAL FORM ACTIONS */
 .form-actions {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 3rem;
-  padding-top: 2rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
   border-top: 1px solid #374151;
 }
 
 .action-buttons {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  max-width: 500px;
 }
 
-/* Professional Base Button Styles */
+/* MINIMAL BUTTON STYLES */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 1rem 2rem;
-  border: none;
-  border-radius: 12px;
-  font-size: 1rem;
-  font-weight: 600;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   text-decoration: none;
-  min-height: 56px;
-  min-width: 140px;
+  min-height: 40px;
   white-space: nowrap;
-  position: relative;
-  overflow: hidden;
-  letter-spacing: 0.025em;
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.15),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  border: 1px solid;
 }
 
-/* Premium Primary Button (Next/Create) */
+/* PRIMARY BUTTON - Simple Blue */
 .btn-primary {
-  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 50%, #06B6D4 100%);
-  color: #FFFFFF;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  box-shadow: 
-    0 4px 16px rgba(59, 130, 246, 0.4),
-    0 1px 3px rgba(59, 130, 246, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  position: relative;
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.6s ease;
+  background: #3B82F6;
+  color: white;
+  border-color: #3B82F6;
 }
 
 .btn-primary:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 
-    0 8px 25px rgba(59, 130, 246, 0.5),
-    0 4px 12px rgba(59, 130, 246, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  background: linear-gradient(135deg, #2563EB 0%, #1E40AF 50%, #0891B2 100%);
-}
-
-.btn-primary:hover:not(:disabled)::before {
-  left: 100%;
+  background: #2563EB;
+  border-color: #2563EB;
 }
 
 .btn-primary:active:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 
-    0 4px 16px rgba(59, 130, 246, 0.4),
-    0 1px 3px rgba(59, 130, 246, 0.2);
+  background: #1D4ED8;
+  border-color: #1D4ED8;
 }
 
-/* Elegant Secondary Button (Previous/Cancel) */
+/* SECONDARY BUTTON - Simple Gray */
 .btn-secondary {
-  background: rgba(75, 85, 99, 0.1);
-  color: #E5E7EB;
-  border: 1px solid #4B5563;
-  backdrop-filter: blur(10px);
-  box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  position: relative;
-}
-
-.btn-secondary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.6s ease;
+  background: transparent;
+  color: #9CA3AF;
+  border-color: #4B5563;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(75, 85, 99, 0.2);
+  background: #374151;
+  color: #F3F4F6;
   border-color: #6B7280;
-  color: #F9FAFB;
-  transform: translateY(-2px);
-  box-shadow: 
-    0 6px 20px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.btn-secondary:hover:not(:disabled)::before {
-  left: 100%;
 }
 
 .btn-secondary:active:not(:disabled) {
-  transform: translateY(0);
-  background: rgba(75, 85, 99, 0.3);
+  background: #4B5563;
+  color: white;
 }
 
-/* Professional Disabled States */
+/* DISABLED STATE */
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   background: #374151;
   color: #6B7280;
   border-color: #374151;
 }
 
 .btn:disabled:hover {
-  transform: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #374151;
+  color: #6B7280;
+  border-color: #374151;
 }
 
-.btn:disabled::before {
-  display: none;
-}
-
-/* Professional Button Icons */
+/* BUTTON ICONS */
 .btn svg {
   flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-.btn-primary:hover:not(:disabled) svg {
-  transform: translateX(3px) scale(1.05);
-}
-
-.btn-secondary:hover:not(:disabled) svg {
-  transform: translateX(-3px) scale(1.05);
-}
-
-/* Professional Loading Spinner */
+/* LOADING SPINNER */
 .spinner {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: 2px solid transparent;
   border-top: 2px solid currentColor;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-/* Professional Responsive Design */
+/* RESPONSIVE */
 @media (max-width: 768px) {
-  .form-actions {
-    padding-top: 1.5rem;
-    margin-top: 2rem;
-  }
-
   .action-buttons {
     flex-direction: column;
-    gap: 1rem;
-    max-width: 100%;
+    gap: 0.75rem;
   }
 
   .btn {
     width: 100%;
-    max-width: 300px;
-    padding: 1.125rem 1.5rem;
-    min-height: 60px;
-    font-size: 1.125rem;
+    max-width: 200px;
   }
 }
 
 @media (max-width: 480px) {
   .btn {
-    font-size: 1rem;
-    padding: 1rem 1.25rem;
-    min-height: 56px;
     max-width: 100%;
-  }
-
-  .form-actions {
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-  }
-
-  .action-buttons {
-    gap: 0.75rem;
   }
 }
 
