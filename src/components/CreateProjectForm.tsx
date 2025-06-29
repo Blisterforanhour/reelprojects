@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import './CreateProjectForm.css';
-import { getSupabaseClient } from '@reelapps/auth';
+import { getSupabaseClient } from '../lib/auth';
 import { 
   Plus, 
   X, 
