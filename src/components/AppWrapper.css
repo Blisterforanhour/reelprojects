@@ -41,6 +41,11 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
   padding: 2rem;
   border: 1px solid #374151;
+  transition: all 0.3s ease;
+}
+
+.signup-container {
+  max-width: 36rem;
 }
 
 .auth-header {
@@ -70,6 +75,12 @@
   gap: 1.5rem;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -94,6 +105,7 @@
   transform: translateY(-50%);
   color: #6B7280;
   pointer-events: none;
+  z-index: 1;
 }
 
 .form-input {
@@ -112,6 +124,11 @@
   outline: none;
   border-color: #3B82F6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input.error {
+  border-color: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .form-input::placeholder {
@@ -134,10 +151,71 @@
   padding: 0.25rem;
   border-radius: 4px;
   transition: color 0.2s ease;
+  z-index: 2;
 }
 
 .password-toggle:hover {
   color: #9CA3AF;
+}
+
+.field-error {
+  color: #EF4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.password-requirements {
+  margin-top: 0.25rem;
+}
+
+.password-requirements small {
+  color: #6B7280;
+  font-size: 0.75rem;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.form-checkbox {
+  width: 1rem;
+  height: 1rem;
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+.form-checkbox:checked {
+  background: #3B82F6;
+  border-color: #3B82F6;
+}
+
+.form-checkbox.error {
+  border-color: #EF4444;
+}
+
+.checkbox-label {
+  color: #9CA3AF;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.terms-link {
+  color: #3B82F6;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.terms-link:hover {
+  color: #60A5FA;
+  text-decoration: underline;
 }
 
 .error-message {
@@ -232,7 +310,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .auth-screen {
     padding: 1rem;
   }
@@ -241,10 +319,21 @@
     padding: 1.5rem;
   }
 
+  .signup-container {
+    max-width: 28rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
   .auth-title {
     font-size: 1.5rem;
   }
+}
 
+@media (max-width: 640px) {
   .form-input {
     padding: 0.875rem 0.875rem 0.875rem 2.75rem;
   }
@@ -256,13 +345,18 @@
   .password-toggle {
     right: 0.875rem;
   }
+
+  .checkbox-container {
+    gap: 0.5rem;
+  }
 }
 
 /* Focus and accessibility improvements */
 .form-input:focus-visible,
 .submit-button:focus-visible,
 .auth-link:focus-visible,
-.password-toggle:focus-visible {
+.password-toggle:focus-visible,
+.form-checkbox:focus-visible {
   outline: 2px solid #3B82F6;
   outline-offset: 2px;
 }
@@ -280,6 +374,10 @@
   .form-input:focus {
     border-color: #F8FAFC;
   }
+
+  .form-checkbox {
+    border-color: #6B7280;
+  }
 }
 
 /* Reduced motion support */
@@ -291,6 +389,10 @@
 
   .submit-button:hover:not(:disabled) {
     transform: none;
+  }
+
+  .auth-container {
+    transition: none;
   }
 
   * {
