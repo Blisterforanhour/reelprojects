@@ -64,7 +64,7 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
             <div className="text-sm text-gray-400">
               Part of the{' '}
               <a 
-                href="https://reelapps.co.za" 
+                href="https://www.reelapps.co.za" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -79,7 +79,7 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
           <div className="text-sm text-gray-500">
             Build your professional portfolio with{' '}
             <a 
-              href="https://reelapps.co.za/reelcv" 
+              href="https://reelcv.reelapps.co.za" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -148,7 +148,7 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
               <p className="text-sm text-gray-500">
                 Your verified skills will automatically sync with{' '}
                 <a 
-                  href="https://reelapps.co.za/reelcv" 
+                  href="https://reelcv.reelapps.co.za" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -168,7 +168,7 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
               <h3 className="text-lg font-semibold text-white mb-2">Explore the ReelApps Ecosystem</h3>
               <div className="flex flex-wrap justify-center gap-6 text-sm">
                 <a 
-                  href="https://reelapps.co.za/reelcv" 
+                  href="https://reelcv.reelapps.co.za" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -176,20 +176,28 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
                   ReelCV - Professional Profiles
                 </a>
                 <a 
-                  href="https://reelapps.co.za/reelpersona" 
+                  href="https://reelpersona.reelapps.co.za" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  ReelPersona - Personal Branding
+                  ReelPersona - Work Personality Assessment
                 </a>
                 <a 
-                  href="https://reelapps.co.za/reeltalent" 
+                  href="https://reelhunter.reelapps.co.za" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"
                 >
-                  ReelTalent - Talent Acquisition
+                  ReelHunter - Talent Acquisition
+                </a>
+                <a 
+                  href="https://reelskills.reelapps.co.za" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  ReelSkills - Skill Development
                 </a>
               </div>
             </div>
@@ -197,7 +205,7 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
               <p>
                 Powered by{' '}
                 <a 
-                  href="https://reelapps.co.za" 
+                  href="https://www.reelapps.co.za" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"

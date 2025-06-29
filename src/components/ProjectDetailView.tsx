@@ -631,7 +631,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                 <button 
                   className="btn btn-primary full-width mb-3"
                   onClick={() => {
-                    window.open('https://reelproject.reelapps.co.za', '_blank', 'noopener,noreferrer');
+                    window.open('https://reelcv.reelapps.co.za', '_blank', 'noopener,noreferrer');
                   }}
                 >
                   <Eye size={16} />
@@ -644,7 +644,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                   </p>
                   <div className="flex flex-col gap-1">
                     <a 
-                      href="https://reelapps.co.za/reelpersona" 
+                      href="https://reelpersona.reelapps.co.za" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -652,12 +652,20 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                       • ReelPersona - Work Personality Assessment
                     </a>
                     <a 
-                      href="https://reelapps.co.za/reeltalent" 
+                      href="https://reelhunter.reelapps.co.za" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-400 hover:text-blue-300 transition-colors"
                     >
-                      • ReelTalent - Find Opportunities
+                      • ReelHunter - Find Opportunities
+                    </a>
+                    <a 
+                      href="https://reelskills.reelapps.co.za" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      • ReelSkills - Skill Development
                     </a>
                   </div>
                 </div>

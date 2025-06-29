@@ -194,7 +194,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
               <div className="text-xs text-gray-500 mt-2">
                 Part of the{' '}
                 <a 
-                  href="https://reelapps.co.za" 
+                  href="https://www.reelapps.co.za" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -441,11 +441,11 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                       />
                       <label htmlFor="acceptTerms" className="checkbox-label">
                         I agree to the{' '}
-                        <a href="https://reelapps.co.za/terms" target="_blank" className="terms-link">
+                        <a href="https://www.reelapps.co.za/terms" target="_blank" className="terms-link">
                           Terms of Service
                         </a>{' '}
                         and{' '}
-                        <a href="https://reelapps.co.za/privacy" target="_blank" className="terms-link">
+                        <a href="https://www.reelapps.co.za/privacy" target="_blank" className="terms-link">
                           Privacy Policy
                         </a>
                       </label>
@@ -462,18 +462,23 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                     <ul className="space-y-1">
                       <li>• Build projects with <strong>ReelProject</strong></li>
                       <li>• Create your professional profile with{' '}
-                        <a href="https://reelproject.reelapps.co.za" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                        <a href="https://reelcv.reelapps.co.za" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                           ReelCV
                         </a>
                       </li>
                       <li>• Discover your work personality with{' '}
-                        <a href="https://reelapps.co.za/reelpersona" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                        <a href="https://reelpersona.reelapps.co.za" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                           ReelPersona
                         </a>
                       </li>
                       <li>• Find opportunities with{' '}
-                        <a href="https://reelapps.co.za/reeltalent" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-                          ReelTalent
+                        <a href="https://reelhunter.reelapps.co.za" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                          ReelHunter
+                        </a>
+                      </li>
+                      <li>• Develop skills with{' '}
+                        <a href="https://reelskills.reelapps.co.za" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                          ReelSkills
                         </a>
                       </li>
                     </ul>
@@ -545,7 +550,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
               <div className="text-xs text-gray-500">
                 <p className="mb-2">Powered by{' '}
                   <a 
-                    href="https://reelapps.co.za" 
+                    href="https://www.reelapps.co.za" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -555,7 +560,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                 </p>
                 <div className="flex flex-wrap justify-center gap-3 text-xs">
                   <a 
-                    href="https://reelproject.reelapps.co.za" 
+                    href="https://reelcv.reelapps.co.za" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -564,7 +569,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                   </a>
                   <span className="text-gray-600">•</span>
                   <a 
-                    href="https://reelapps.co.za/reelpersona" 
+                    href="https://reelpersona.reelapps.co.za" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -573,12 +578,21 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                   </a>
                   <span className="text-gray-600">•</span>
                   <a 
-                    href="https://reelapps.co.za/reeltalent" 
+                    href="https://reelhunter.reelapps.co.za" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    ReelTalent
+                    ReelHunter
+                  </a>
+                  <span className="text-gray-600">•</span>
+                  <a 
+                    href="https://reelskills.reelapps.co.za" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    ReelSkills
                   </a>
                 </div>
               </div>
