@@ -23,9 +23,12 @@
     /* Path Aliases */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@reelapps/auth": ["../../ReelApps/packages/auth/src/index.ts"],
+      "@reelapps/ui": ["../../ReelApps/packages/ui/src/index.ts"],
+      "@reelapps-styles/*": ["../../ReelApps/src/styles/*"]
     }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
-} 
+}
