@@ -663,26 +663,26 @@
   margin-bottom: 1.5rem;
 }
 
-/* ENHANCED FORM ACTIONS - Modern Professional Navigation Buttons */
+/* PROFESSIONAL FORM ACTIONS - Modern Navigation Buttons */
 .form-actions {
   display: flex;
-  gap: 1rem;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-top: 2rem;
+  margin-top: 3rem;
   padding-top: 2rem;
   border-top: 1px solid #374151;
 }
 
 .action-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: center;
+  justify-content: center;
   width: 100%;
-  justify-content: space-between;
+  max-width: 500px;
 }
 
-/* Enhanced Base Button Styles */
+/* Professional Base Button Styles */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -697,21 +697,25 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
   min-height: 56px;
+  min-width: 140px;
   white-space: nowrap;
   position: relative;
   overflow: hidden;
   letter-spacing: 0.025em;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
 }
 
-/* Enhanced Primary Button (Next/Create) */
+/* Premium Primary Button (Next/Create) */
 .btn-primary {
   background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 50%, #06B6D4 100%);
   color: #FFFFFF;
-  border: 1px solid transparent;
+  border: 1px solid rgba(59, 130, 246, 0.2);
   box-shadow: 
-    0 4px 14px rgba(59, 130, 246, 0.4),
-    0 0 0 1px rgba(59, 130, 246, 0.1),
+    0 4px 16px rgba(59, 130, 246, 0.4),
+    0 1px 3px rgba(59, 130, 246, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
   position: relative;
 }
@@ -724,14 +728,14 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  transition: left 0.6s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 
     0 8px 25px rgba(59, 130, 246, 0.5),
-    0 0 0 1px rgba(59, 130, 246, 0.2),
+    0 4px 12px rgba(59, 130, 246, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   background: linear-gradient(135deg, #2563EB 0%, #1E40AF 50%, #0891B2 100%);
 }
@@ -743,11 +747,11 @@
 .btn-primary:active:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 
-    0 4px 14px rgba(59, 130, 246, 0.4),
-    0 0 0 1px rgba(59, 130, 246, 0.1);
+    0 4px 16px rgba(59, 130, 246, 0.4),
+    0 1px 3px rgba(59, 130, 246, 0.2);
 }
 
-/* Enhanced Secondary Button (Previous/Cancel) */
+/* Elegant Secondary Button (Previous/Cancel) */
 .btn-secondary {
   background: rgba(75, 85, 99, 0.1);
   color: #E5E7EB;
@@ -767,7 +771,7 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
+  transition: left 0.6s ease;
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -789,7 +793,7 @@
   background: rgba(75, 85, 99, 0.3);
 }
 
-/* Enhanced Disabled Button States */
+/* Professional Disabled States */
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -809,7 +813,7 @@
   display: none;
 }
 
-/* Enhanced Button Icons */
+/* Professional Button Icons */
 .btn svg {
   flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -824,7 +828,7 @@
   transform: translateX(-3px) scale(1.05);
 }
 
-/* Enhanced Loading Spinner in Buttons */
+/* Professional Loading Spinner */
 .spinner {
   width: 18px;
   height: 18px;
@@ -835,43 +839,25 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
-/* Enhanced Button Positioning */
-.action-buttons .btn-secondary {
-  order: 1;
-}
-
-.action-buttons .btn-primary {
-  order: 2;
-  margin-left: auto;
-}
-
-/* Enhanced Responsive Button Layout */
+/* Professional Responsive Design */
 @media (max-width: 768px) {
   .form-actions {
     padding-top: 1.5rem;
+    margin-top: 2rem;
   }
 
   .action-buttons {
     flex-direction: column;
     gap: 1rem;
+    max-width: 100%;
   }
 
   .btn {
     width: 100%;
+    max-width: 300px;
     padding: 1.125rem 1.5rem;
     min-height: 60px;
     font-size: 1.125rem;
-  }
-
-  .action-buttons .btn-secondary,
-  .action-buttons .btn-primary {
-    order: unset;
-    margin-left: 0;
-  }
-
-  /* Stack order on mobile: Primary on top, Secondary below */
-  .action-buttons {
-    flex-direction: column-reverse;
   }
 }
 
@@ -880,11 +866,16 @@
     font-size: 1rem;
     padding: 1rem 1.25rem;
     min-height: 56px;
+    max-width: 100%;
   }
 
   .form-actions {
     margin-top: 1.5rem;
     padding-top: 1rem;
+  }
+
+  .action-buttons {
+    gap: 0.75rem;
   }
 }
 
