@@ -104,6 +104,7 @@
   width: 100%;
 }
 
+/* FIXED ICON POSITIONING - NO OVERLAP */
 .input-icon {
   position: absolute;
   left: 1rem;
@@ -117,9 +118,10 @@
   height: 20px;
 }
 
+/* FIXED INPUT PADDING - PROPER SPACING FOR ICONS */
 .form-input {
   width: 100%;
-  padding: 0.875rem 0.875rem 0.875rem 3.25rem;
+  padding: 0.875rem 1rem 0.875rem 3.5rem; /* Increased left padding */
   background: #111827;
   border: 1px solid #374151;
   border-radius: 8px;
@@ -147,7 +149,7 @@
 }
 
 .password-input {
-  padding-right: 3.5rem;
+  padding-right: 3.5rem; /* Increased right padding for password toggle */
 }
 
 .password-toggle {
@@ -351,7 +353,7 @@
   }
 }
 
-/* Responsive Design */
+/* RESPONSIVE DESIGN - FIXED ICON SPACING */
 @media (max-width: 768px) {
   .auth-screen {
     padding: 0.5rem;
@@ -376,7 +378,7 @@
   }
 
   .form-input {
-    padding: 0.75rem 0.75rem 0.75rem 3rem;
+    padding: 0.75rem 1rem 0.75rem 3.25rem; /* Adjusted for mobile */
     font-size: 0.875rem;
   }
 
@@ -413,7 +415,7 @@
   }
 
   .form-input {
-    padding: 0.75rem 0.75rem 0.75rem 2.75rem;
+    padding: 0.75rem 1rem 0.75rem 3rem; /* Adjusted for small screens */
     min-height: 40px;
   }
 
@@ -464,7 +466,7 @@
   }
 
   .form-input {
-    padding: 0.625rem 0.625rem 0.625rem 2.5rem;
+    padding: 0.625rem 0.875rem 0.625rem 2.75rem; /* Adjusted for very small screens */
     font-size: 0.8125rem;
   }
 
