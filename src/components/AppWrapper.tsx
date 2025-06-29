@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import './AppWrapper.css';
 
 interface AppWrapperProps {
   children: React.ReactNode;
@@ -30,10 +31,12 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-300">Initializing...</p>
+      <div className="app-wrapper">
+        <div className="initializing-screen">
+          <div className="initializing-content">
+            <div className="loading-spinner"></div>
+            <p className="initializing-text">Initializing ReelProject...</p>
+          </div>
         </div>
       </div>
     );
@@ -51,124 +54,173 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
       }
     };
 
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">ReelProject</h1>
-            <p className="text-gray-400">
-              {authMode === 'login' && 'Sign in to your account'}
-              {authMode === 'signup' && 'Create your account'}
-              {authMode === 'reset' && 'Reset your password'}
-            </p>
-          </div>
+    const getSubmitButtonContent = () => {
+      if (isLoading) {
+        return <div className="button-spinner"></div>;
+      }
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
+      switch (authMode) {
+        case 'login':
+          return (
+            <>
+              <User size={20} />
+              Sign In
+            </>
+          );
+        case 'signup':
+          return (
+            <>
+              <User size={20} />
+              Sign Up
+            </>
+          );
+        case 'reset':
+          return (
+            <>
+              <Mail size={20} />
+              Send Reset Email
+            </>
+          );
+        default:
+          return 'Submit';
+      }
+    };
+
+    const getAuthTitle = () => {
+      switch (authMode) {
+        case 'login':
+          return 'Sign in to your account';
+        case 'signup':
+          return 'Create your account';
+        case 'reset':
+          return 'Reset your password';
+        default:
+          return '';
+      }
+    };
+
+    return (
+      <div className="app-wrapper">
+        <div className="auth-screen">
+          <div className="auth-container">
+            <div className="auth-header">
+              <h1 className="auth-title">ReelProject</h1>
+              <p className="auth-subtitle">{getAuthTitle()}</p>
             </div>
 
-            {authMode !== 'reset' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password
+            <form onSubmit={handleSubmit} className="auth-form">
+              <div className="form-group">
+                <label htmlFor="email" className="form-label">
+                  Email
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <div className="input-container">
+                  <Mail className="input-icon" size={20} />
                   <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-12 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter your password"
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="form-input"
+                    placeholder="Enter your email"
                     required
+                    disabled={isLoading}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
                 </div>
               </div>
-            )}
 
-            {error && (
-              <div className="bg-red-900/50 border border-red-500 rounded-lg p-3">
-                <p className="text-red-300 text-sm">{error}</p>
-              </div>
-            )}
+              {authMode !== 'reset' && (
+                <div className="form-group">
+                  <label htmlFor="password" className="form-label">
+                    Password
+                  </label>
+                  <div className="input-container">
+                    <Lock className="input-icon" size={20} />
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`form-input ${authMode !== 'reset' ? 'password-input' : ''}`}
+                      placeholder="Enter your password"
+                      required
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="password-toggle"
+                      disabled={isLoading}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
-            >
-              {isLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
+              {error && (
+                <div className="error-message">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="submit-button"
+              >
+                {getSubmitButtonContent()}
+              </button>
+            </form>
+
+            <div className="auth-links">
+              {authMode === 'login' && (
                 <>
-                  {authMode === 'login' && <><User size={20} className="mr-2" /> Sign In</>}
-                  {authMode === 'signup' && <><User size={20} className="mr-2" /> Sign Up</>}
-                  {authMode === 'reset' && <><Mail size={20} className="mr-2" /> Send Reset Email</>}
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('signup')}
+                    className="auth-link"
+                    disabled={isLoading}
+                  >
+                    Don't have an account? Sign up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('reset')}
+                    className="auth-link secondary-link"
+                    disabled={isLoading}
+                  >
+                    Forgot your password?
+                  </button>
                 </>
               )}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center space-y-2">
-            {authMode === 'login' && (
-              <>
+              {authMode === 'signup' && (
                 <button
-                  onClick={() => setAuthMode('signup')}
-                  className="text-blue-400 hover:text-blue-300 text-sm"
+                  type="button"
+                  onClick={() => setAuthMode('login')}
+                  className="auth-link"
+                  disabled={isLoading}
                 >
-                  Don't have an account? Sign up
+                  Already have an account? Sign in
                 </button>
-                <br />
+              )}
+              {authMode === 'reset' && (
                 <button
-                  onClick={() => setAuthMode('reset')}
-                  className="text-gray-400 hover:text-gray-300 text-sm"
+                  type="button"
+                  onClick={() => setAuthMode('login')}
+                  className="auth-link"
+                  disabled={isLoading}
                 >
-                  Forgot your password?
+                  Back to sign in
                 </button>
-              </>
-            )}
-            {authMode === 'signup' && (
-              <button
-                onClick={() => setAuthMode('login')}
-                className="text-blue-400 hover:text-blue-300 text-sm"
-              >
-                Already have an account? Sign in
-              </button>
-            )}
-            {authMode === 'reset' && (
-              <button
-                onClick={() => setAuthMode('login')}
-                className="text-blue-400 hover:text-blue-300 text-sm"
-              >
-                Back to sign in
-              </button>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  return <>{children}</>;
+  return <div className="app-wrapper">{children}</div>;
 };
