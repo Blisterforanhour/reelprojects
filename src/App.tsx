@@ -26,7 +26,7 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
 
   const addProject = (project: Project) => {
     onAddProject(project);
-    setShowCreateForm(false); // Close the form after successful creation
+    setShowCreateForm(false);
   };
 
   const handleCloseForm = () => {
@@ -34,7 +34,6 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
   };
 
   const handleProjectClick = (project: Project) => {
-    // Pass the project data in navigation state
     navigate(`/project/${project.id}`, { state: { project } });
   };
 
@@ -43,7 +42,7 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-4">ReelProject</h1>
-          <p className="text-gray-400">Collaborative project management for modern teams</p>
+          <p className="text-gray-400">AI-powered project management and skill verification</p>
         </div>
 
         <div className="grid gap-6">
@@ -53,7 +52,7 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
                 onClick={() => setShowCreateForm(true)}
                 className="w-full p-4 border-2 border-dashed border-gray-600 rounded-lg hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
               >
-                + Create New Project
+                + Create New AI-Powered Project
               </button>
             </div>
           ) : (
@@ -75,9 +74,17 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
                   >
                     <h3 className="font-semibold text-white">{project.name}</h3>
                     <p className="text-gray-400 text-sm">{project.description}</p>
-                    <p className="text-gray-500 text-xs mt-2">
-                      Created: {new Date(project.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <p className="text-gray-500 text-xs">
+                        Created: {new Date(project.created_at).toLocaleDateString()}
+                      </p>
+                      {project.analysis && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-blue-400">AI Score: {project.analysis.clarity_score}/10</span>
+                          <span className="text-green-400">{project.skill_demonstrations?.filter((s: any) => s.verified).length || 0} verified skills</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -132,10 +139,17 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Mock Supabase initialization
-        initializeSupabase('mock-url', 'mock-key');
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        
+        if (!supabaseUrl || !supabaseAnonKey) {
+          throw new Error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+        }
+        
+        initializeSupabase(supabaseUrl, supabaseAnonKey);
         await initialize();
       } catch (error) {
+        console.error('Initialization error:', error);
         setInitError(error instanceof Error ? error.message : 'Init error');
       } finally {
         setLocalInitializing(false);
@@ -156,7 +170,19 @@ function App() {
   }
 
   if (initError) {
-    return <div className="min-h-screen flex items-center justify-center">{initError}</div>;
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 mb-4">
+            <h2 className="text-red-300 font-semibold mb-2">Configuration Error</h2>
+            <p className="text-red-200 text-sm">{initError}</p>
+          </div>
+          <p className="text-gray-400 text-sm">
+            Please ensure your Supabase environment variables are properly configured.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

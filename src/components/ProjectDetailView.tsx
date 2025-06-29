@@ -91,50 +91,14 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
 
     // Otherwise try to find project from props
     if (projects && projectId) {
-        const foundProject = projects.find((p: ProjectData) => p.id === projectId);
-        if (foundProject) {
-          setProject(foundProject);
-          setIsLoading(false);
-          return;
+      const foundProject = projects.find((p: ProjectData) => p.id === projectId);
+      if (foundProject) {
+        setProject(foundProject);
+        setIsLoading(false);
+        return;
       }
     }
 
-    // Create a mock project if not found
-    if (projectId) {
-      const mockProject: ProjectData = {
-        id: projectId,
-        name: 'Project Demo',
-        description: 'A demonstration project to showcase the platform capabilities.',
-        target_skills: ['React', 'TypeScript', 'Node.js'],
-        analysis: {
-          clarity_score: 8,
-          feasibility_score: 7,
-          identified_risks: [
-            'Technical complexity may require additional research',
-            'Timeline might need adjustment based on scope'
-          ],
-          suggested_technologies: [
-            'React/TypeScript for frontend development',
-            'Node.js for backend services'
-          ],
-          detected_skills: [],
-          skill_mapping: []
-        },
-        plan: [
-          '1. Project setup and environment configuration',
-          '2. Core feature development and implementation', 
-          '3. Testing and quality assurance',
-          '4. Documentation and deployment preparation',
-          '5. Launch and monitoring'
-        ],
-        skill_demonstrations: [],
-        status: 'active',
-        created_at: new Date().toISOString(),
-        type: 'Multi-Skill Showcase'
-      };
-      setProject(mockProject);
-    }
-    
     setIsLoading(false);
   }, [projectId, location.state, projects]);
 
@@ -143,7 +107,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
       <div className="project-detail-view">
         <div className="loading-spinner">
           <div className="spinner"></div>
-          <p>Loading project...</p>
+          <p>Loading AI-powered project...</p>
         </div>
       </div>
     );
@@ -156,7 +120,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           <div className="not-found-content">
             <Target size={64} className="not-found-icon" />
             <h2>Project Not Found</h2>
-            <p>The project you're looking for could not be found.</p>
+            <p>The AI-powered project you're looking for could not be found.</p>
             <button onClick={() => navigate('/')} className="btn btn-primary">
               <ArrowLeft size={16} />
               Back to Projects
@@ -243,22 +207,41 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
     setUploadingVideo(true);
     
     try {
-      console.log('Uploading project showcase video...');
+      console.log('Uploading project showcase video for AI analysis...');
       
-      // Simulate file upload to storage
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const videoUrl = URL.createObjectURL(projectVideo);
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('video', projectVideo);
+      formData.append('projectId', project.id);
+      formData.append('skillIds', JSON.stringify(project.skill_demonstrations.map(s => s.id)));
       
-      console.log('Project video uploaded successfully');
+      // Upload to Supabase Storage
+      const supabase = getSupabaseClient();
+      const fileName = `${project.id}-showcase-${Date.now()}.${projectVideo.name.split('.').pop()}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('project-videos')
+        .upload(fileName, projectVideo);
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-videos')
+        .getPublicUrl(fileName);
+
+      console.log('Video uploaded successfully, starting AI analysis...');
       
       // Automatically analyze video for all skills
-      await handleVideoAnalysis(videoUrl);
+      await handleVideoAnalysis(publicUrl);
       
       setShowVideoUploadModal(false);
       setProjectVideo(null);
     } catch (error) {
       console.error('Video upload failed:', error);
-      alert('Failed to upload video. Please try again.');
+      alert(`Failed to upload video: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploadingVideo(false);
     }
@@ -271,53 +254,58 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
       setVideoAnalyzing(true);
       console.log('Starting AI analysis of project showcase video...');
       
-      // Call the AI verification edge function for each skill
       const supabase = getSupabaseClient();
       const skillAnalysis = [];
       
-      // Process each skill with the video
+      // Process each skill with the AI video verification
       for (const skill of project.skill_demonstrations) {
         try {
-      const { data, error } = await supabase.functions.invoke('verify-skill-video', {
-        body: {
-          action: 'verify-project-evidence',
-          projectId: project.id,
-          skillId: skill.id,
-          skillName: skill.name,
+          console.log(`Analyzing skill: ${skill.name}`);
+          
+          const { data, error } = await supabase.functions.invoke('verify-skill-video', {
+            body: {
+              action: 'verify-project-evidence',
+              projectId: project.id,
+              skillId: skill.id,
+              skillName: skill.name,
               demonstrationMethod: 'video',
               evidenceUrl: videoUrl,
-              evidenceType: projectVideo?.type || 'video/mp4'
+              evidenceType: projectVideo?.type || 'video/mp4',
+              skillRequirements: skill.requirements,
+              verificationCriteria: project.analysis.skill_mapping.find(m => m.skill === skill.name)?.verification_criteria || []
             }
           });
           
-          if (!error && data) {
+          if (error) {
+            console.error(`AI verification failed for skill ${skill.name}:`, error);
+            continue;
+          }
+
+          if (data && data.rating) {
             skillAnalysis.push({
               skillId: skill.id,
               rating: data.rating,
-              feedback: data.feedback
+              feedback: data.feedback || `AI verified ${skill.name} demonstration in video`,
+              confidence: data.confidence || 0.8
             });
+            console.log(`AI verification successful for ${skill.name}: ${data.rating}/5`);
           }
         } catch (err) {
-          console.warn(`Verification failed for skill ${skill.name}:`, err);
+          console.warn(`AI verification failed for skill ${skill.name}:`, err);
         }
       }
-      
-      const data = { skillAnalysis };
 
-      // Check if we got any successful verifications
       if (skillAnalysis.length === 0) {
-        console.warn('AI video analysis failed, no skills verified, using fallback');
-        await simulateVideoAnalysis();
-        return;
+        throw new Error('AI analysis failed for all skills. Please try again or check your video quality.');
       }
 
-      console.log('AI video analysis completed:', data);
+      console.log('AI video analysis completed:', skillAnalysis);
 
-      // Update all skills with verification results
+      // Update all skills with AI verification results
       const updatedProject = {
         ...project,
         skill_demonstrations: project.skill_demonstrations.map(skill => {
-          const skillResult = data.skillAnalysis?.find((r: any) => r.skillId === skill.id);
+          const skillResult = skillAnalysis.find(r => r.skillId === skill.id);
           return skillResult ? {
             ...skill,
             verified: true,
@@ -349,56 +337,18 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
         }
       }
 
-      // Show comprehensive results
-      const verifiedSkills = data.skillAnalysis?.length || 0;
-      alert(`🎉 Video Analysis Complete!\n\n${verifiedSkills} skills verified from your showcase video!\n\nCheck individual skill ratings below.`);
+      // Show comprehensive AI results
+      const verifiedSkills = skillAnalysis.length;
+      const avgRating = skillAnalysis.reduce((acc, s) => acc + s.rating, 0) / skillAnalysis.length;
+      
+      alert(`🤖 AI Analysis Complete!\n\n${verifiedSkills} skills verified from your showcase video!\nAverage AI Rating: ${avgRating.toFixed(1)}/5\n\nCheck individual skill ratings and AI feedback below.`);
       
     } catch (error) {
-      console.error('Video analysis error:', error);
-      await simulateVideoAnalysis();
+      console.error('AI video analysis error:', error);
+      alert(`AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease ensure your video clearly demonstrates each skill and try again.`);
     } finally {
       setVideoAnalyzing(false);
     }
-  };
-
-  const simulateVideoAnalysis = async () => {
-    if (!project) return;
-    
-    console.log('Using fallback video analysis...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    const ratings = [3, 4, 4, 5, 5];
-    
-    // Update all skills with simulated verification results
-    const updatedProject = {
-      ...project,
-      skill_demonstrations: project.skill_demonstrations.map(skill => ({
-        ...skill,
-        verified: true,
-        rating: ratings[Math.floor(Math.random() * ratings.length)],
-        status: 'verified' as const,
-        verification_feedback: `Demonstrated ${skill.name} skills in project showcase video`,
-        evidence_url: projectVideo ? URL.createObjectURL(projectVideo) : undefined
-      }))
-    };
-
-    setProject(updatedProject);
-    
-    // Update localStorage
-    const savedProjects = localStorage.getItem('reelProjects');
-    if (savedProjects) {
-      try {
-        const projects = JSON.parse(savedProjects);
-        const updatedProjects = projects.map((p: ProjectData) => 
-          p.id === project.id ? updatedProject : p
-        );
-        localStorage.setItem('reelProjects', JSON.stringify(updatedProjects));
-      } catch (error) {
-        console.error('Error updating localStorage:', error);
-      }
-    }
-    
-    alert(`✅ Video Analysis Complete!\n\nAll ${project.skill_demonstrations.length} skills have been analyzed and verified from your showcase video!`);
   };
 
   const renderSkillCard = (skill: ProjectSkill) => {
@@ -417,7 +367,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
               <span className="proficiency">{skill.proficiency}</span>
               <div className="demonstration-type">
                 <IconComponent size={16} />
-                {demonstrationLabels[skill.demonstrationMethod]}
+                AI: {demonstrationLabels[skill.demonstrationMethod]}
               </div>
             </div>
           </div>
@@ -432,12 +382,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           </div>
         </div>
 
-        <p className="skill-requirements">{skill.requirements}</p>
+        <p className="skill-requirements">AI Requirement: {skill.requirements}</p>
 
         {skill.aiPrompt && (
           <div className="ai-prompt">
             <Brain size={16} />
-            <span>{skill.aiPrompt}</span>
+            <span>AI Strategy: {skill.aiPrompt}</span>
           </div>
         )}
 
@@ -446,7 +396,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             <h5>Evidence</h5>
             <a href={skill.evidence_url} target="_blank" rel="noopener noreferrer" className="evidence-link">
               <ExternalLink size={16} />
-              View Submission
+              View AI-Analyzed Submission
             </a>
           </div>
         )}
@@ -455,7 +405,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           <div className="verification-section">
             <div className="verification-header">
               <CheckCircle size={16} className="verified-icon" />
-              <span>✨ AI Verified on ReelCV</span>
+              <span>🤖 AI Verified</span>
             </div>
             <div className="skill-rating">
               <span className="rating-label">AI Rating: </span>
@@ -472,7 +422,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             {skill.verification_feedback && (
               <div className="ai-feedback">
                 <Brain size={14} />
-                <span className="feedback-text">{skill.verification_feedback}</span>
+                <span className="feedback-text">AI Feedback: {skill.verification_feedback}</span>
               </div>
             )}
           </div>
@@ -482,7 +432,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           {skill.evidence_url && (
             <div className="evidence-indicator">
               <Eye size={16} />
-              <span>Included in project video</span>
+              <span>AI-analyzed in project video</span>
             </div>
           )}
 
@@ -513,38 +463,38 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
         <div className="project-info">
           <div className="project-title-section">
             <h1>{project.name}</h1>
-            <span className="project-type">Multi-Skill Showcase</span>
+            <span className="project-type">AI-Powered Showcase</span>
           </div>
           <p className="project-description">{project.description}</p>
-          {project.goals && <p className="project-goals">{project.goals}</p>}
+          {project.goals && <p className="project-goals">Goals: {project.goals}</p>}
         </div>
       </div>
 
       <div className="project-content">
         <div className="content-grid">
           <div className="main-content">
-            {/* Video upload section */}
+            {/* AI-powered video upload section */}
             <section className="video-upload-section">
               <div className="section-header">
                 <h2>
                   <Video size={24} />
-                  Project Showcase Video
+                  AI-Powered Project Showcase
                 </h2>
                 <p className="section-description">
-                  Upload one comprehensive video demonstrating all skills in this project
+                  Upload your project video for AI analysis and automatic skill verification
                 </p>
               </div>
               
               {!project.skill_demonstrations.some(s => s.evidence_url) ? (
                 <div className="upload-prompt">
                   <div className="upload-instructions">
-                    <h3>📹 Create Your Multi-Skill Showcase</h3>
-                    <p>Record a single video demonstrating all {project.skill_demonstrations.length} skills listed below. Our AI will analyze your video and automatically verify each skill.</p>
+                    <h3>🤖 AI-Enhanced Multi-Skill Analysis</h3>
+                    <p>Upload a comprehensive video demonstrating all {project.skill_demonstrations.length} skills. Our advanced AI will automatically analyze and verify each skill demonstration.</p>
                     <ul>
                       <li>Duration: 5-15 minutes total</li>
                       <li>Clearly announce each skill as you demonstrate it</li>
-                      <li>Show actual work, not just explanations</li>
-                      <li>Good lighting and clear audio required</li>
+                      <li>Show actual work and explain your approach</li>
+                      <li>AI will provide detailed feedback and ratings</li>
                     </ul>
                   </div>
                   <button 
@@ -553,21 +503,21 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                     disabled={videoAnalyzing}
                   >
                     <Upload size={20} />
-                    Upload Showcase Video
+                    Upload for AI Analysis
                   </button>
                 </div>
               ) : (
                 <div className="video-status">
                   <CheckCircle size={20} />
                   <div className="status-info">
-                    <span>Project video uploaded and analyzed</span>
-                    <small>{project.skill_demonstrations.filter(s => s.verified).length} skills verified</small>
+                    <span>Video analyzed by AI</span>
+                    <small>{project.skill_demonstrations.filter(s => s.verified).length} skills AI-verified</small>
                   </div>
                   <button 
                     className="btn btn-secondary btn-sm"
                     onClick={handleProjectVideoUpload}
                   >
-                    Replace Video
+                    Re-analyze with AI
                   </button>
                 </div>
               )}
@@ -577,11 +527,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
               <div className="section-header">
                 <h2>
                   <Target size={24} />
-                  Skill Demonstrations ({project.skill_demonstrations?.length || 0})
+                  AI-Verified Skills ({project.skill_demonstrations?.length || 0})
                 </h2>
                 <div className="progress-summary">
                   <span>
-                    {project.skill_demonstrations?.filter(s => s.status === 'verified').length || 0} verified,
+                    {project.skill_demonstrations?.filter(s => s.status === 'verified').length || 0} AI-verified,
                     {' '}
                     {project.skill_demonstrations?.filter(s => s.status === 'completed').length || 0} completed,
                     {' '}
@@ -598,7 +548,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             <section className="plan-section">
               <h2>
                 <Brain size={24} />
-                Project Plan
+                AI-Generated Project Plan
               </h2>
               <div className="plan-steps">
                 {project.plan?.map((step, index) => (
@@ -608,7 +558,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                       <p>{step}</p>
                     </div>
                   </div>
-                )) || <p>No project plan available</p>}
+                )) || <p>No AI-generated plan available</p>}
               </div>
             </section>
           </div>
@@ -617,34 +567,34 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             <div className="analysis-card">
               <h3>
                 <Brain size={20} />
-                AI Analysis
+                AI Analysis Results
               </h3>
               <div className="analysis-scores">
                 <div className="score-item">
-                  <span>Clarity Score</span>
+                  <span>AI Clarity Score</span>
                   <span className="score">{project.analysis?.clarity_score || 0}/10</span>
                 </div>
                 <div className="score-item">
-                  <span>Feasibility Score</span>
+                  <span>AI Feasibility</span>
                   <span className="score">{project.analysis?.feasibility_score || 0}/10</span>
                 </div>
               </div>
 
               <div className="analysis-section">
-                <h4>Identified Risks</h4>
+                <h4>AI-Identified Risks</h4>
                 <ul className="risk-list">
                   {project.analysis?.identified_risks?.map((risk, index) => (
                     <li key={index}>{risk}</li>
-                  )) || <li>No risks identified</li>}
+                  )) || <li>No AI risks identified</li>}
                 </ul>
               </div>
 
               <div className="analysis-section">
-                <h4>Suggested Technologies</h4>
+                <h4>AI-Suggested Technologies</h4>
                 <div className="tech-tags">
                   {project.analysis?.suggested_technologies?.map((tech, index) => (
                     <span key={index} className="tech-tag">{tech}</span>
-                  )) || <span className="tech-tag">No suggestions available</span>}
+                  )) || <span className="tech-tag">No AI suggestions</span>}
                 </div>
               </div>
             </div>
@@ -654,14 +604,14 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                 <Award size={20} />
                 ReelCV Integration
               </h3>
-              <p>Verified skills from this project will automatically appear on your ReelCV profile.</p>
+              <p>AI-verified skills from this project will automatically appear on your ReelCV profile with AI ratings.</p>
               
               <div className="integration-stats">
                 <div className="stat">
                   <span className="stat-number">
                     {project.skill_demonstrations?.filter(s => s.verified).length || 0}
                   </span>
-                  <span className="stat-label">Skills on ReelCV</span>
+                  <span className="stat-label">AI-Verified Skills</span>
                 </div>
                 <div className="stat">
                   <span className="stat-number">
@@ -670,31 +620,31 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                       '0.0'
                     }
                   </span>
-                  <span className="stat-label">Avg Rating</span>
+                  <span className="stat-label">Avg AI Rating</span>
                 </div>
               </div>
 
               <button 
                 className="btn btn-primary full-width"
                 onClick={() => {
-                  const reelCVUrl = window.location.origin.replace(':5175', ':5174');
+                  const reelCVUrl = window.location.origin.replace(':5177', ':5174');
                   window.open(reelCVUrl, '_blank', 'noopener,noreferrer');
                 }}
               >
                 <Eye size={16} />
-                View on ReelCV
+                View AI Profile on ReelCV
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Project Video Upload Modal */}
+      {/* AI-powered video upload modal */}
       {showVideoUploadModal && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>Upload Project Showcase Video</h3>
+              <h3>Upload for AI Analysis</h3>
               <button 
                 className="close-btn"
                 onClick={() => setShowVideoUploadModal(false)}
@@ -705,21 +655,20 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             
             <div className="modal-content">
               <div className="video-upload-instructions">
-                <h4>📹 Creating Your Multi-Skill Showcase Video</h4>
-              <p className="upload-description">
-                  Create one comprehensive video demonstrating all the skills in this project. 
-                  Your video will be analyzed by AI to verify each skill automatically.
+                <h4>🤖 AI-Powered Skill Verification</h4>
+                <p className="upload-description">
+                  Upload your project showcase video for advanced AI analysis. Our AI will automatically identify, analyze, and verify each skill demonstration with detailed feedback.
                 </p>
 
                 <div className="skills-to-demonstrate">
-                  <h5>Skills to demonstrate in your video:</h5>
+                  <h5>Skills for AI analysis:</h5>
                   <div className="skill-list">
                     {project?.skill_demonstrations.map((skill, index) => (
                       <div key={skill.id} className="skill-item">
                         <span className="skill-number">{index + 1}</span>
                         <div className="skill-info">
                           <strong>{skill.name}</strong>
-                          <p>{skill.requirements}</p>
+                          <p>AI will analyze: {skill.requirements}</p>
                         </div>
                       </div>
                     ))}
@@ -727,14 +676,14 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                 </div>
 
                 <div className="video-guidelines">
-                  <h5>🎯 Video Guidelines:</h5>
+                  <h5>🎯 AI Analysis Guidelines:</h5>
                   <ul>
                     <li>Keep it between 5-15 minutes total</li>
                     <li>Clearly state which skill you're demonstrating</li>
-                    <li>Show your work in action, not just talking</li>
-                    <li>Include brief explanations of your approach</li>
-                    <li>Use good lighting and audio quality</li>
-                    <li>Organize sections by skill for easy identification</li>
+                    <li>Show your work in action with explanations</li>
+                    <li>AI will provide detailed ratings and feedback</li>
+                    <li>Use good lighting and audio for better AI analysis</li>
+                    <li>Organize sections by skill for optimal AI recognition</li>
                   </ul>
                 </div>
               </div>
@@ -749,7 +698,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                 />
                 <label htmlFor="project-video" className="file-upload-label">
                   <Video size={24} />
-                  <span>{projectVideo ? projectVideo.name : 'Choose video file or drag here'}</span>
+                  <span>{projectVideo ? projectVideo.name : 'Choose video file for AI analysis'}</span>
                   <small>Supported formats: MP4, MOV, AVI, WebM</small>
                 </label>
               </div>
@@ -769,12 +718,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                   {uploadingVideo ? (
                     <>
                       <div className="spinner"></div>
-                      Uploading & Analyzing...
+                      AI Analyzing...
                     </>
                   ) : (
                     <>
                       <Upload size={16} />
-                      Upload & Analyze Video
+                      Upload & AI Analyze
                     </>
                   )}
                 </button>

@@ -96,110 +96,6 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     return () => clearTimeout(timer);
   }, [projectDescription, projectGoals, targetSkills]);
 
-  const createMockAnalysis = (description: string, goals: string, skills: string[]): ScopeAnalysis => {
-    const detectedSkills: ProjectSkill[] = skills.map((skill, index) => {
-      const category = getSkillCategory(skill);
-      const demonstrationMethod = getDefaultDemonstrationMethod(category);
-      
-      return {
-        id: `skill-${index}`,
-        name: skill,
-        category,
-        proficiency: ['intermediate', 'advanced', 'expert'][Math.floor(Math.random() * 3)] as any,
-        demonstrationMethod,
-        requirements: getSkillRequirements(skill, demonstrationMethod),
-        aiPrompt: getSkillAIPrompt(skill, demonstrationMethod)
-      };
-    });
-
-    return {
-      clarity_score: Math.floor(Math.random() * 3) + 7,
-      feasibility_score: Math.floor(Math.random() * 3) + 7,
-      identified_risks: [
-        'Multi-skill demonstration complexity may require careful timeline planning',
-        'Integration challenges between different skill demonstration methods',
-        'Maintaining quality standards across diverse skill areas',
-        'Ensuring authentic skill verification without over-engineering'
-      ],
-      suggested_technologies: [
-        'GitHub for code repository and version control',
-        'Loom or similar for video skill demonstrations',
-        'Notion or GitBook for comprehensive documentation',
-        'Figma for design and presentation materials'
-      ],
-      detected_skills: detectedSkills,
-      skill_mapping: detectedSkills.map(skill => ({
-        skill: skill.name,
-        demonstration_method: skill.demonstrationMethod,
-        complexity_level: Math.floor(Math.random() * 3) + 3,
-        verification_criteria: getVerificationCriteria(skill.name, skill.demonstrationMethod)
-      }))
-    };
-  };
-
-  const getSkillCategory = (skillName: string): 'technical' | 'soft' | 'language' | 'certification' => {
-    const lowerSkill = skillName.toLowerCase();
-    
-    if (skillCategories.technical.some(tech => lowerSkill.includes(tech.toLowerCase()))) return 'technical';
-    if (skillCategories.soft.some(soft => lowerSkill.includes(soft.toLowerCase()))) return 'soft';
-    if (skillCategories.language.some(lang => lowerSkill.includes(lang.toLowerCase()))) return 'language';
-    if (skillCategories.certification.some(cert => lowerSkill.includes(cert.toLowerCase()))) return 'certification';
-    
-    return 'technical';
-  };
-
-  const getDefaultDemonstrationMethod = (category: string): 'code' | 'video' | 'documentation' | 'presentation' | 'live-demo' => {
-    switch (category) {
-      case 'technical': return 'code';
-      case 'soft': return 'video';
-      case 'language': return 'presentation';
-      case 'certification': return 'documentation';
-      default: return 'code';
-    }
-  };
-
-  const getSkillRequirements = (skill: string, method: string): string => {
-    const methodRequirements = {
-      code: `Build a functional feature that demonstrates ${skill} expertise with clean, well-documented code`,
-      video: `Create a 3-5 minute video explaining ${skill} concepts and showing practical application`,
-      documentation: `Write comprehensive documentation showcasing ${skill} knowledge and implementation details`,
-      presentation: `Develop a presentation that demonstrates ${skill} understanding and real-world usage`,
-      'live-demo': `Prepare a live demonstration showing ${skill} in action with interactive examples`
-    };
-    
-    return methodRequirements[method as keyof typeof methodRequirements] || methodRequirements.code;
-  };
-
-  const getSkillAIPrompt = (skill: string, method: string): string => {
-    const prompts = {
-      code: `Implement a feature using ${skill} that shows mastery of core concepts, best practices, and real-world application. Include proper error handling, testing, and documentation.`,
-      video: `Record yourself explaining ${skill} fundamentals, demonstrate a practical example, and discuss how you've applied this skill in professional contexts.`,
-      documentation: `Create detailed documentation for ${skill} that includes setup guides, usage examples, troubleshooting tips, and advanced techniques you've mastered.`,
-      presentation: `Design a presentation about ${skill} that covers theory, practical applications, case studies, and your personal expertise journey.`,
-      'live-demo': `Prepare a live coding/demonstration session showcasing ${skill} where you build something functional while explaining your thought process.`
-    };
-    
-    return prompts[method as keyof typeof prompts] || prompts.code;
-  };
-
-  const getVerificationCriteria = (skill: string, method: string): string[] => {
-    const baseCriteria = [
-      `Demonstrates practical understanding of ${skill}`,
-      'Shows real-world application and context',
-      'Includes clear explanations and documentation'
-    ];
-
-    const methodSpecific = {
-      code: ['Code quality and best practices', 'Proper testing and error handling', 'Clean architecture and documentation'],
-      video: ['Clear communication and explanation', 'Practical demonstration included', 'Professional presentation quality'],
-      documentation: ['Comprehensive coverage of topics', 'Well-structured and organized', 'Includes examples and use cases'],
-      presentation: ['Engaging and informative content', 'Visual aids and examples', 'Demonstrates expertise depth'],
-      'live-demo': ['Interactive and engaging demonstration', 'Handles questions and edge cases', 'Shows problem-solving in real-time']
-    };
-
-    return [...baseCriteria, ...(methodSpecific[method as keyof typeof methodSpecific] || methodSpecific.code)];
-  };
-
   const handleRealTimeAnalysis = async () => {
     if (isAnalyzing || !projectDescription || targetSkills.length === 0) return;
 
@@ -208,6 +104,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
     try {
       const supabase = getSupabaseClient();
+      
+      console.log('Calling AI analysis edge function...');
       const { data, error } = await supabase.functions.invoke('analyze-project-scope', {
         body: {
           projectDescription,
@@ -217,19 +115,18 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       });
 
       if (error) {
-        console.warn('Edge Function failed, using enhanced mock analysis:', error);
-        const mockAnalysis = createMockAnalysis(projectDescription, projectGoals, targetSkills);
-        setAnalysis(mockAnalysis);
-        generateSkillFeedback(mockAnalysis);
-      } else {
-        setAnalysis(data);
-        generateSkillFeedback(data);
+        console.error('AI analysis error:', error);
+        setAnalysisError(`AI analysis failed: ${error.message}`);
+        return;
       }
+
+      console.log('AI analysis successful:', data);
+      setAnalysis(data);
+      generateSkillFeedback(data);
+      
     } catch (err) {
-      console.warn('Analysis request failed, using enhanced mock analysis:', err);
-      const mockAnalysis = createMockAnalysis(projectDescription, projectGoals, targetSkills);
-      setAnalysis(mockAnalysis);
-      generateSkillFeedback(mockAnalysis);
+      console.error('Analysis request failed:', err);
+      setAnalysisError('Failed to connect to AI analysis service. Please check your connection and try again.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -275,27 +172,26 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       return;
     }
 
+    if (!analysis) {
+      setError('Please wait for AI analysis to complete before creating the project');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      let analysisData = analysis;
-      if (!analysisData) {
-        analysisData = createMockAnalysis(projectDescription, projectGoals, targetSkills);
-        setAnalysis(analysisData);
-      }
-
-      // Generate a project plan based on the skills and description
+      // Generate a project plan based on the AI analysis
       const generateProjectPlan = (skills: ProjectSkill[], description: string): string[] => {
         const plan = [
           `Project Setup: Initialize the ${projectName} project with proper structure and dependencies`,
-          'Requirements Analysis: Define detailed specifications and user stories',
-          'Architecture Design: Plan the system architecture and technology stack',
+          'Requirements Analysis: Define detailed specifications and user stories based on AI recommendations',
+          'Architecture Design: Plan the system architecture using suggested technologies',
           ...skills.map(skill => `${skill.name} Implementation: ${skill.requirements}`),
           'Integration Testing: Ensure all components work together seamlessly',
-          'Documentation: Create comprehensive project documentation and skill verification evidence',
-          'Final Review: Conduct thorough testing and prepare for skill verification',
-          'Deployment & Presentation: Deploy the project and present skill demonstrations'
+          'AI-Powered Documentation: Create comprehensive project documentation with skill verification evidence',
+          'Quality Assurance: Conduct thorough testing and prepare for AI skill verification',
+          'Deployment & Presentation: Deploy the project and present skill demonstrations for AI analysis'
         ];
         return plan;
       };
@@ -306,9 +202,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
         description: projectDescription,
         goals: projectGoals,
         target_skills: targetSkills,
-        analysis: analysisData,
-        plan: generateProjectPlan(analysisData.detected_skills, projectDescription),
-        skill_demonstrations: analysisData.detected_skills.map(skill => ({
+        analysis: analysis,
+        plan: generateProjectPlan(analysis.detected_skills, projectDescription),
+        skill_demonstrations: analysis.detected_skills.map(skill => ({
           ...skill,
           status: 'planned',
           evidence_url: null,
@@ -318,10 +214,10 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
         })),
         status: 'active',
         created_at: new Date().toISOString(),
-        type: 'multi-skill-showcase'
+        type: 'AI-Powered Multi-Skill Showcase'
       };
 
-      console.log('Multi-skill project created:', newProject);
+      console.log('AI-powered project created:', newProject);
       onProjectCreated(newProject);
 
     } catch (err) {
@@ -338,32 +234,32 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       <div className="step-header">
         <Brain className="step-icon" size={24} />
         <div>
-          <h2>Project Setup</h2>
-          <p>Define your multi-skill showcase project</p>
+          <h2>AI-Powered Project Setup</h2>
+          <p>Define your project and let AI analyze the optimal skill demonstration approach</p>
         </div>
       </div>
 
       <div className="form-group">
         <label htmlFor="projectName">Project Name *</label>
-          <input
+        <input
           id="projectName"
-            type="text"
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
+          type="text"
+          value={projectName}
+          onChange={(e) => setProjectName(e.target.value)}
           placeholder="e.g., E-commerce Platform, Portfolio Website, Data Analytics Dashboard"
-            required
+          required
           disabled={isLoading}
-          />
+        />
       </div>
 
       <div className="form-group">
         <label htmlFor="projectDescription">Project Description *</label>
-          <textarea
+        <textarea
           id="projectDescription"
-            value={projectDescription}
-            onChange={(e) => setProjectDescription(e.target.value)}
-          placeholder="Describe what you're building, its purpose, key features, and target users. Be specific about the problems it solves."
-            required
+          value={projectDescription}
+          onChange={(e) => setProjectDescription(e.target.value)}
+          placeholder="Describe what you're building, its purpose, key features, and target users. Be specific about the problems it solves. AI will analyze this to suggest optimal skill demonstrations."
+          required
           disabled={isLoading}
           rows={4}
         />
@@ -378,7 +274,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
           id="projectGoals"
           value={projectGoals}
           onChange={(e) => setProjectGoals(e.target.value)}
-          placeholder="What specific outcomes do you want to achieve? How will you measure success?"
+          placeholder="What specific outcomes do you want to achieve? How will you measure success? AI will use this to optimize skill verification strategies."
           disabled={isLoading}
           rows={3}
         />
@@ -389,13 +285,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
           {isAnalyzing ? (
             <div className="analyzing-indicator">
               <div className="spinner"></div>
-              <span>AI is analyzing your project...</span>
+              <span>AI is analyzing your project for optimal skill demonstration...</span>
             </div>
           ) : analysis ? (
             <div className="analysis-preview">
               <div className="analysis-scores">
                 <div className="score-item">
-                  <span>Clarity Score</span>
+                  <span>AI Clarity Score</span>
                   <span className="score">{analysis.clarity_score}/10</span>
                 </div>
                 <div className="score-item">
@@ -405,8 +301,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
               </div>
               <div className="quick-insights">
                 <Lightbulb size={16} />
-                <span>AI detected {analysis.detected_skills.length} skills from your description</span>
+                <span>AI detected {analysis.detected_skills.length} skills and generated verification strategies</span>
               </div>
+            </div>
+          ) : analysisError ? (
+            <div className="analysis-error">
+              <AlertCircle size={16} />
+              <span>{analysisError}</span>
             </div>
           ) : null}
         </div>
@@ -419,8 +320,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       <div className="step-header">
         <Target className="step-icon" size={24} />
         <div>
-          <h2>Skills to Demonstrate</h2>
-          <p>Select skills you'll showcase and get verified through this project</p>
+          <h2>AI-Enhanced Skill Selection</h2>
+          <p>Select skills for AI-powered verification and automated demonstration planning</p>
         </div>
       </div>
       
@@ -430,7 +331,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             type="text"
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
-            placeholder="Add a skill (e.g., React, Leadership, UI Design)"
+            placeholder="Add a skill for AI analysis (e.g., React, Leadership, UI Design)"
             disabled={isLoading}
             onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
           />
@@ -442,7 +343,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
       {targetSkills.length > 0 && (
         <div className="selected-skills">
-          <h3>Selected Skills ({targetSkills.length})</h3>
+          <h3>AI-Analyzed Skills ({targetSkills.length})</h3>
           <div className="skills-grid">
             {targetSkills.map((skill, index) => {
               const skillAnalysis = analysis?.detected_skills.find(s => s.name === skill);
@@ -457,7 +358,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                       {skillAnalysis && (
                         <div className="demo-method">
                           <DemoIcon size={14} />
-                          <span>{skillAnalysis.demonstrationMethod}</span>
+                          <span>AI: {skillAnalysis.demonstrationMethod}</span>
                         </div>
                       )}
                     </div>
@@ -469,11 +370,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                   {skillAnalysis && (
                     <div className="skill-details">
                       <div className="skill-requirement">
-                        <strong>Requirement:</strong> {skillAnalysis.requirements}
+                        <strong>AI Requirement:</strong> {skillAnalysis.requirements}
                       </div>
                       {skillAnalysis.aiPrompt && (
                         <div className="ai-prompt">
-                          <strong>AI Challenge:</strong> {skillAnalysis.aiPrompt}
+                          <strong>AI Verification Strategy:</strong> {skillAnalysis.aiPrompt}
                         </div>
                       )}
                     </div>
@@ -527,7 +428,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
         <Users className="step-icon" size={24} />
         <div>
           <h2>AI Analysis & Verification Plan</h2>
-          <p>Review how your skills will be demonstrated and verified</p>
+          <p>Review AI-generated skill verification strategies and project insights</p>
         </div>
       </div>
 
@@ -537,7 +438,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             <div className="analysis-scores">
               <div className="score-card">
                 <div className="score-number">{analysis.clarity_score}</div>
-                <div className="score-label">Clarity Score</div>
+                <div className="score-label">AI Clarity Score</div>
               </div>
               <div className="score-card">
                 <div className="score-number">{analysis.feasibility_score}</div>
@@ -545,13 +446,13 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
               </div>
               <div className="score-card">
                 <div className="score-number">{analysis.detected_skills.length}</div>
-                <div className="score-label">Skills Detected</div>
+                <div className="score-label">AI-Analyzed Skills</div>
               </div>
             </div>
           </div>
 
           <div className="skills-verification-plan">
-            <h3>Skill Verification Plan</h3>
+            <h3>AI-Powered Skill Verification Plan</h3>
             <div className="verification-grid">
               {analysis.detected_skills.map((skill, index) => {
                 const DemoIcon = demonstrationIcons[skill.demonstrationMethod];
@@ -571,7 +472,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                     
                     <div className="verification-details">
                       <div className="complexity-level">
-                        <span>Complexity:</span>
+                        <span>AI Complexity:</span>
                         <div className="complexity-stars">
                           {[...Array(5)].map((_, i) => (
                             <Star 
@@ -584,11 +485,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                       </div>
                       
                       <div className="demonstration-method">
-                        <strong>Method:</strong> {skill.demonstrationMethod.replace('-', ' ')}
+                        <strong>AI Method:</strong> {skill.demonstrationMethod.replace('-', ' ')}
                       </div>
                       
                       <div className="verification-criteria">
-                        <strong>Verification Criteria:</strong>
+                        <strong>AI Verification Criteria:</strong>
                         <ul>
                           {mapping?.verification_criteria.slice(0, 3).map((criteria, i) => (
                             <li key={i}>{criteria}</li>
@@ -604,7 +505,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
           {analysis.identified_risks.length > 0 && (
             <div className="risks-section">
-              <h3>Identified Risks & Considerations</h3>
+              <h3>AI-Identified Risks & Considerations</h3>
               <div className="risks-list">
                 {analysis.identified_risks.map((risk, index) => (
                   <div key={index} className="risk-item">
@@ -618,7 +519,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
 
           {analysis.suggested_technologies.length > 0 && (
             <div className="technologies-section">
-              <h3>Suggested Technologies & Tools</h3>
+              <h3>AI-Suggested Technologies & Tools</h3>
               <div className="tech-list">
                 {analysis.suggested_technologies.map((tech, index) => (
                   <div key={index} className="tech-item">
@@ -633,8 +534,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       ) : (
         <div className="no-analysis">
           <Brain size={48} />
-          <h3>No Analysis Available</h3>
-          <p>Complete the previous steps to see AI analysis</p>
+          <h3>No AI Analysis Available</h3>
+          <p>Complete the previous steps to see AI-powered analysis and verification strategies</p>
         </div>
       )}
     </div>
@@ -647,7 +548,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       case 2:
         return targetSkills.length > 0;
       case 3:
-        return true; // Review step is always valid if we reached it
+        return analysis !== null; // Require AI analysis to be complete
       default:
         return false;
     }
@@ -669,7 +570,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
     <div className="create-project-modal">
       <div className="modal-content">
         <div className="modal-header">
-          <h1>Create Multi-Skill Project</h1>
+          <h1>Create AI-Powered Project</h1>
           <button onClick={onClose} className="close-btn">
             <X size={24} />
           </button>
@@ -680,9 +581,9 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
             <div key={step} className={`step ${currentStep >= step ? 'active' : ''}`}>
               <div className="step-number">{step}</div>
               <div className="step-text">
-                {step === 1 && 'Setup'}
+                {step === 1 && 'AI Setup'}
                 {step === 2 && 'Skills'}
-                {step === 3 && 'Review'}
+                {step === 3 && 'AI Review'}
               </div>
             </div>
           ))}
@@ -713,11 +614,20 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                 <button 
                   type="button" 
                   onClick={nextStep}
-                  disabled={!isStepValid(currentStep)}
+                  disabled={!isStepValid(currentStep) || isAnalyzing}
                   className="btn-primary"
                 >
-                  Next
-                  <ChevronRight size={16} />
+                  {isAnalyzing ? (
+                    <>
+                      <div className="spinner"></div>
+                      AI Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <ChevronRight size={16} />
+                    </>
+                  )}
                 </button>
               ) : (
                 <button 
@@ -728,11 +638,11 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
                   {isLoading ? (
                     <>
                       <div className="spinner"></div>
-                      Creating Project...
+                      Creating AI Project...
                     </>
                   ) : (
                     <>
-                      Create Project
+                      Create AI Project
                       <ArrowRight size={16} />
                     </>
                   )}

@@ -1,63 +1,19 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { create } from 'zustand';
 
-// Mock Supabase client
-let supabaseClient: any = null;
+let supabaseClient: SupabaseClient | null = null;
 
 export const initializeSupabase = (url: string, anonKey: string) => {
-  supabaseClient = {
-    auth: {
-      signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
-        // Mock authentication
-        return {
-          data: {
-            user: { id: '1', email },
-            session: { access_token: 'mock-token' }
-          },
-          error: null
-        };
-      },
-      signUp: async ({ email, password }: { email: string; password: string }) => {
-        return {
-          data: {
-            user: { id: '1', email },
-            session: { access_token: 'mock-token' }
-          },
-          error: null
-        };
-      },
-      resetPasswordForEmail: async (email: string) => {
-        return { data: {}, error: null };
-      },
-      getSession: async () => {
-        return {
-          data: { session: { access_token: 'mock-token' } },
-          error: null
-        };
-      },
-      onAuthStateChange: (callback: any) => {
-        // Mock auth state change
-        setTimeout(() => {
-          callback('SIGNED_IN', { access_token: 'mock-token' });
-        }, 100);
-        return { data: { subscription: { unsubscribe: () => {} } } };
-      }
-    },
-    functions: {
-      invoke: async (functionName: string, options: any) => {
-        // Mock function invocation
-        return {
-          data: {
-            rating: Math.floor(Math.random() * 5) + 1,
-            feedback: `Mock feedback for ${functionName}`
-          },
-          error: null
-        };
-      }
-    }
-  };
+  supabaseClient = createClient(url, anonKey);
+  return supabaseClient;
 };
 
-export const getSupabaseClient = () => supabaseClient;
+export const getSupabaseClient = () => {
+  if (!supabaseClient) {
+    throw new Error('Supabase client not initialized. Call initializeSupabase first.');
+  }
+  return supabaseClient;
+};
 
 interface AuthState {
   user: any;
@@ -69,6 +25,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -79,16 +36,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
 
   initialize: async () => {
-    set({ isInitializing: true });
+    set({ isInitializing: true, error: null });
     try {
-      // Mock initialization
-      await new Promise(resolve => setTimeout(resolve, 500));
-      set({ 
-        isInitializing: false,
-        isAuthenticated: true,
-        user: { id: '1', email: 'demo@example.com' }
+      const supabase = getSupabaseClient();
+      
+      // Get current session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Session error:', error);
+        set({ 
+          isInitializing: false,
+          isAuthenticated: false,
+          user: null,
+          error: error.message
+        });
+        return;
+      }
+
+      if (session?.user) {
+        set({
+          isInitializing: false,
+          isAuthenticated: true,
+          user: session.user,
+          error: null
+        });
+      } else {
+        set({
+          isInitializing: false,
+          isAuthenticated: false,
+          user: null,
+          error: null
+        });
+      }
+
+      // Listen for auth changes
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          set({
+            isAuthenticated: true,
+            user: session.user,
+            error: null
+          });
+        } else if (event === 'SIGNED_OUT') {
+          set({
+            isAuthenticated: false,
+            user: null,
+            error: null
+          });
+        }
       });
+
     } catch (error) {
+      console.error('Auth initialization error:', error);
       set({ 
         isInitializing: false,
         error: error instanceof Error ? error.message : 'Initialization failed'
@@ -99,11 +99,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        set({
+          isLoading: false,
+          error: error.message
+        });
+        return;
+      }
+
       set({
         isLoading: false,
         isAuthenticated: true,
-        user: { id: '1', email }
+        user: data.user,
+        error: null
       });
     } catch (error) {
       set({
@@ -116,12 +130,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signup: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      set({
-        isLoading: false,
-        isAuthenticated: true,
-        user: { id: '1', email }
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
       });
+
+      if (error) {
+        set({
+          isLoading: false,
+          error: error.message
+        });
+        return;
+      }
+
+      // Note: User might need to confirm email before being authenticated
+      if (data.user && data.session) {
+        set({
+          isLoading: false,
+          isAuthenticated: true,
+          user: data.user,
+          error: null
+        });
+      } else {
+        set({
+          isLoading: false,
+          error: 'Please check your email to confirm your account'
+        });
+      }
     } catch (error) {
       set({
         isLoading: false,
@@ -133,12 +169,53 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   sendPasswordResetEmail: async (email: string) => {
     set({ isLoading: true, error: null });
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      set({ isLoading: false });
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+      if (error) {
+        set({
+          isLoading: false,
+          error: error.message
+        });
+        return;
+      }
+
+      set({ 
+        isLoading: false,
+        error: null
+      });
     } catch (error) {
       set({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Password reset failed'
+      });
+    }
+  },
+
+  logout: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        set({
+          isLoading: false,
+          error: error.message
+        });
+        return;
+      }
+
+      set({
+        isLoading: false,
+        isAuthenticated: false,
+        user: null,
+        error: null
+      });
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Logout failed'
       });
     }
   }
