@@ -73,11 +73,27 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
   const [skillFeedback, setSkillFeedback] = useState<{[key: string]: string}>({});
   const [useAWS, setUseAWS] = useState(isAWSAvailable());
 
+  // Real skill suggestions based on industry standards
   const skillCategories = {
-    technical: ['React', 'Node.js', 'Python', 'TypeScript', 'SQL', 'MongoDB', 'AWS', 'Docker', 'Git', 'JavaScript'],
-    soft: ['Leadership', 'Communication', 'Problem Solving', 'Project Management', 'Team Collaboration', 'Time Management', 'Critical Thinking', 'Creativity', 'Adaptability', 'Mentoring'],
-    language: ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 'Korean', 'Italian', 'Portuguese', 'Arabic'],
-    certification: ['AWS Certified', 'Google Cloud', 'Microsoft Azure', 'Scrum Master', 'PMP', 'CISSP', 'CompTIA', 'Cisco', 'Oracle', 'Salesforce']
+    technical: [
+      'React', 'Vue.js', 'Angular', 'Node.js', 'Python', 'TypeScript', 'JavaScript',
+      'SQL', 'PostgreSQL', 'MongoDB', 'AWS', 'Docker', 'Kubernetes', 'Git',
+      'REST APIs', 'GraphQL', 'Microservices', 'DevOps', 'CI/CD', 'Testing'
+    ],
+    soft: [
+      'Leadership', 'Communication', 'Problem Solving', 'Project Management', 
+      'Team Collaboration', 'Time Management', 'Critical Thinking', 'Creativity', 
+      'Adaptability', 'Mentoring', 'Conflict Resolution', 'Strategic Planning'
+    ],
+    language: [
+      'English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 
+      'Korean', 'Italian', 'Portuguese', 'Arabic', 'Russian', 'Hindi'
+    ],
+    certification: [
+      'AWS Certified Solutions Architect', 'Google Cloud Professional', 
+      'Microsoft Azure', 'Scrum Master', 'PMP', 'CISSP', 'CompTIA Security+', 
+      'Cisco CCNA', 'Oracle Certified', 'Salesforce Certified'
+    ]
   };
 
   const demonstrationIcons = {
@@ -239,7 +255,7 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
       };
 
       const newProject = {
-        id: Date.now().toString(),
+        id: `project_${Date.now()}`,
         name: projectName,
         description: projectDescription,
         goals: projectGoals,
@@ -256,7 +272,8 @@ const CreateProjectForm: React.FC<CreateProjectFormProps> = ({ onClose, onProjec
         })),
         status: 'active',
         created_at: new Date().toISOString(),
-        type: useAWS ? 'AWS-Powered Multi-Skill Showcase' : 'AI-Powered Multi-Skill Showcase'
+        type: useAWS ? 'AWS-Powered Multi-Skill Showcase' : 'AI-Powered Multi-Skill Showcase',
+        user_id: 'current_user' // This will be set properly in the parent component
       };
 
       console.log(`${useAWS ? 'AWS' : 'AI'}-powered project created:`, newProject);

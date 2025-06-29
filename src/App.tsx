@@ -5,6 +5,7 @@ import { initializeAWS } from './lib/aws'
 import { AppWrapper } from './components/AppWrapper'
 import CreateProjectForm from './components/CreateProjectForm'
 import ProjectDetailView from './components/ProjectDetailView'
+import { getSupabaseClient } from './lib/auth'
 import './App.css'
 
 interface Project {
@@ -19,9 +20,14 @@ interface Project {
   status: string;
   created_at: string;
   type: string;
+  user_id: string;
 }
 
-function ProjectListView({ projects, onAddProject }: { projects: Project[], onAddProject: (project: Project) => void }) {
+function ProjectListView({ projects, onAddProject, isLoading }: { 
+  projects: Project[], 
+  onAddProject: (project: Project) => void,
+  isLoading: boolean 
+}) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const navigate = useNavigate();
 
@@ -37,6 +43,17 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
   const handleProjectClick = (project: Project) => {
     navigate(`/project/${project.id}`, { state: { project } });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading your projects...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 p-8">
@@ -100,6 +117,12 @@ function ProjectListView({ projects, onAddProject }: { projects: Project[], onAd
               </div>
             </div>
           )}
+
+          {projects.length === 0 && !showCreateForm && (
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-8 text-center">
+              <p className="text-gray-400 mb-4">No projects yet. Create your first project to start building your professional portfolio.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -121,29 +144,115 @@ function App() {
   const [localInitializing, setLocalInitializing] = useState(true);
   const [initError, setInitError] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
 
-  // Load projects from localStorage on app init
+  // Load projects from Supabase when user is authenticated
   useEffect(() => {
-    const savedProjects = localStorage.getItem('reelProjects');
-    if (savedProjects) {
-      try {
-        const parsedProjects = JSON.parse(savedProjects);
-        setProjects(parsedProjects);
-      } catch (error) {
-        console.error('Error parsing saved projects:', error);
+    if (isAuthenticated && user) {
+      loadUserProjects();
+    } else {
+      setProjects([]);
+    }
+  }, [isAuthenticated, user]);
+
+  const loadUserProjects = async () => {
+    if (!user) return;
+    
+    setProjectsLoading(true);
+    try {
+      const supabase = getSupabaseClient();
+      
+      // Query projects from database
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('profile_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading projects:', error);
+        return;
       }
-    }
-  }, []);
 
-  // Save projects to localStorage whenever projects change
-  useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem('reelProjects', JSON.stringify(projects));
-    }
-  }, [projects]);
+      // Transform database projects to app format
+      const transformedProjects = data?.map(project => ({
+        id: project.id,
+        name: project.title,
+        description: project.description,
+        goals: project.role, // Using role field for goals
+        target_skills: project.technologies || [],
+        analysis: {
+          clarity_score: 8,
+          feasibility_score: 8,
+          identified_risks: [],
+          suggested_technologies: project.technologies || [],
+          detected_skills: [],
+          skill_mapping: []
+        },
+        plan: [],
+        skill_demonstrations: [],
+        status: project.featured ? 'featured' : 'active',
+        created_at: project.created_at,
+        type: 'Professional Project',
+        user_id: user.id
+      })) || [];
 
-  const addProject = (project: Project) => {
-    setProjects(prevProjects => [...prevProjects, project]);
+      setProjects(transformedProjects);
+    } catch (err) {
+      console.error('Failed to load projects:', err);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  const addProject = async (project: Project) => {
+    if (!user) return;
+
+    try {
+      const supabase = getSupabaseClient();
+      
+      // Get user's profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) {
+        throw new Error('User profile not found');
+      }
+
+      // Insert project into database
+      const { data, error } = await supabase
+        .from('projects')
+        .insert({
+          profile_id: profile.id,
+          title: project.name,
+          description: project.description,
+          role: project.goals || '',
+          technologies: project.target_skills,
+          start_date: new Date().toISOString().split('T')[0],
+          featured: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Add to local state
+      const newProject = {
+        ...project,
+        id: data.id,
+        user_id: user.id
+      };
+      
+      setProjects(prevProjects => [newProject, ...prevProjects]);
+    } catch (err) {
+      console.error('Failed to save project:', err);
+      alert('Failed to save project. Please try again.');
+    }
   };
 
   useEffect(() => {
@@ -217,7 +326,13 @@ function App() {
       isLoading={isLoading ?? false}
     >
       <Routes>
-        <Route path="/" element={<ProjectListView projects={projects} onAddProject={addProject} />} />
+        <Route path="/" element={
+          <ProjectListView 
+            projects={projects} 
+            onAddProject={addProject}
+            isLoading={projectsLoading}
+          />
+        } />
         <Route path="/project/:id" element={<ProjectDetailView projects={projects} />} />
       </Routes>
     </AppWrapper>
