@@ -16,11 +16,9 @@ import {
   Rocket,
   Upload,
   ExternalLink,
-  Eye,
-  Cloud
+  Eye
 } from 'lucide-react';
 import { getSupabaseClient } from '../lib/auth';
-import { uploadAndAnalyzeVideo, isAWSAvailable } from '../lib/aws';
 import './ProjectDetailView.css';
 
 interface ProjectSkill {
@@ -80,7 +78,6 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
   const [projectVideo, setProjectVideo] = useState<File | null>(null);
   const [showVideoUploadModal, setShowVideoUploadModal] = useState(false);
   const [videoAnalyzing, setVideoAnalyzing] = useState(false);
-  const [useAWS, setUseAWS] = useState(isAWSAvailable());
 
   useEffect(() => {
     // Try to get project from navigation state first
@@ -110,7 +107,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
       <div className="project-detail-view">
         <div className="loading-spinner">
           <div className="spinner"></div>
-          <p>Loading {useAWS ? 'AWS-powered' : 'AI-powered'} project...</p>
+          <p>Loading AI-powered project...</p>
         </div>
       </div>
     );
@@ -123,7 +120,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           <div className="not-found-content">
             <Target size={64} className="not-found-icon" />
             <h2>Project Not Found</h2>
-            <p>The {useAWS ? 'AWS-powered' : 'AI-powered'} project you're looking for could not be found.</p>
+            <p>The AI-powered project you're looking for could not be found.</p>
             <button onClick={() => navigate('/')} className="btn btn-primary">
               <ArrowLeft size={16} />
               Back to Projects
@@ -134,7 +131,6 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
     );
   }
 
-  const isAWSProject = project.type?.includes('AWS');
   const demonstrationIcons = {
     code: Code,
     video: Video,
@@ -211,118 +207,38 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
     setUploadingVideo(true);
     
     try {
-      console.log(`Uploading project showcase video for ${useAWS && isAWSProject ? 'AWS' : 'AI'} analysis...`);
+      console.log('Uploading project showcase video for AI analysis...');
       
-      if (useAWS && isAWSProject && isAWSAvailable()) {
-        // Use AWS S3 for upload and Bedrock for analysis
-        console.log('Using AWS S3 + Bedrock for video analysis...');
-        
-        const skillAnalysis = [];
-        
-        // Process each skill with AWS
-        for (const skill of project.skill_demonstrations) {
-          try {
-            console.log(`Analyzing skill with AWS: ${skill.name}`);
-            
-            const { videoUrl, analysis } = await uploadAndAnalyzeVideo(
-              projectVideo,
-              project.id,
-              skill.name,
-              skill.requirements,
-              project.analysis.skill_mapping.find(m => m.skill === skill.name)?.verification_criteria || []
-            );
+      // Use Supabase for video upload and analysis
+      console.log('Using Supabase for video upload and analysis...');
+      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('video', projectVideo);
+      formData.append('projectId', project.id);
+      formData.append('skillIds', JSON.stringify(project.skill_demonstrations.map(s => s.id)));
+      
+      // Upload to Supabase Storage
+      const supabase = getSupabaseClient();
+      const fileName = `${project.id}-showcase-${Date.now()}.${projectVideo.name.split('.').pop()}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('project-videos')
+        .upload(fileName, projectVideo);
 
-            skillAnalysis.push({
-              skillId: skill.id,
-              rating: analysis.rating,
-              feedback: analysis.feedback,
-              confidence: analysis.confidence,
-              videoUrl
-            });
-            
-            console.log(`AWS analysis successful for ${skill.name}: ${analysis.rating}/5`);
-          } catch (err) {
-            console.warn(`AWS analysis failed for skill ${skill.name}:`, err);
-          }
-        }
-
-        if (skillAnalysis.length === 0) {
-          throw new Error('AWS analysis failed for all skills. Please try again or check your video quality.');
-        }
-
-        // Update all skills with AWS analysis results
-        const updatedProject = {
-          ...project,
-          skill_demonstrations: project.skill_demonstrations.map(skill => {
-            const skillResult = skillAnalysis.find(r => r.skillId === skill.id);
-            return skillResult ? {
-              ...skill,
-              verified: true,
-              rating: skillResult.rating,
-              status: 'verified' as const,
-              verification_feedback: skillResult.feedback,
-              evidence_url: skillResult.videoUrl
-            } : {
-              ...skill,
-              evidence_url: skillAnalysis[0]?.videoUrl || null,
-              status: 'completed' as const
-            };
-          })
-        };
-
-        setProject(updatedProject);
-        
-        // Update localStorage
-        const savedProjects = localStorage.getItem('reelProjects');
-        if (savedProjects) {
-          try {
-            const projects = JSON.parse(savedProjects);
-            const updatedProjects = projects.map((p: ProjectData) => 
-              p.id === project.id ? updatedProject : p
-            );
-            localStorage.setItem('reelProjects', JSON.stringify(updatedProjects));
-          } catch (error) {
-            console.error('Error updating localStorage:', error);
-          }
-        }
-
-        const verifiedSkills = skillAnalysis.length;
-        const avgRating = skillAnalysis.reduce((acc, s) => acc + s.rating, 0) / skillAnalysis.length;
-        
-        alert(`🚀 AWS Analysis Complete!\n\n${verifiedSkills} skills verified using AWS Bedrock!\nAverage Rating: ${avgRating.toFixed(1)}/5\n\nVideo stored securely in AWS S3.`);
-        
-      } else {
-        // Fallback to Supabase
-        console.log('Using Supabase for video upload and analysis...');
-        
-        // Create FormData for file upload
-        const formData = new FormData();
-        formData.append('video', projectVideo);
-        formData.append('projectId', project.id);
-        formData.append('skillIds', JSON.stringify(project.skill_demonstrations.map(s => s.id)));
-        
-        // Upload to Supabase Storage
-        const supabase = getSupabaseClient();
-        const fileName = `${project.id}-showcase-${Date.now()}.${projectVideo.name.split('.').pop()}`;
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('project-videos')
-          .upload(fileName, projectVideo);
-
-        if (uploadError) {
-          throw new Error(`Upload failed: ${uploadError.message}`);
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('project-videos')
-          .getPublicUrl(fileName);
-
-        console.log('Video uploaded successfully, starting AI analysis...');
-        
-        // Automatically analyze video for all skills
-        await handleVideoAnalysis(publicUrl);
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-videos')
+        .getPublicUrl(fileName);
+
+      console.log('Video uploaded successfully, starting AI analysis...');
+      
+      // Automatically analyze video for all skills
+      await handleVideoAnalysis(publicUrl);
       
       setShowVideoUploadModal(false);
       setProjectVideo(null);
@@ -454,7 +370,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
               <span className="proficiency">{skill.proficiency}</span>
               <div className="demonstration-type">
                 <IconComponent size={16} />
-                {isAWSProject ? 'AWS' : 'AI'}: {demonstrationLabels[skill.demonstrationMethod]}
+                AI: {demonstrationLabels[skill.demonstrationMethod]}
               </div>
             </div>
           </div>
@@ -469,12 +385,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           </div>
         </div>
 
-        <p className="skill-requirements">{isAWSProject ? 'AWS' : 'AI'} Requirement: {skill.requirements}</p>
+        <p className="skill-requirements">AI Requirement: {skill.requirements}</p>
 
         {skill.aiPrompt && (
           <div className="ai-prompt">
             <Brain size={16} />
-            <span>{isAWSProject ? 'AWS' : 'AI'} Strategy: {skill.aiPrompt}</span>
+            <span>AI Strategy: {skill.aiPrompt}</span>
           </div>
         )}
 
@@ -483,7 +399,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             <h5>Evidence</h5>
             <a href={skill.evidence_url} target="_blank" rel="noopener noreferrer" className="evidence-link">
               <ExternalLink size={16} />
-              View {isAWSProject ? 'AWS' : 'AI'}-Analyzed Submission
+              View AI-Analyzed Submission
             </a>
           </div>
         )}
@@ -492,10 +408,10 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           <div className="verification-section">
             <div className="verification-header">
               <CheckCircle size={16} className="verified-icon" />
-              <span>{isAWSProject ? '🚀 AWS' : '🤖 AI'} Verified</span>
+              <span>🤖 AI Verified</span>
             </div>
             <div className="skill-rating">
-              <span className="rating-label">{isAWSProject ? 'AWS' : 'AI'} Rating: </span>
+              <span className="rating-label">AI Rating: </span>
               {Array.from({ length: 5 }, (_, i) => (
                 <Star
                   key={i}
@@ -508,8 +424,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             </div>
             {skill.verification_feedback && (
               <div className="ai-feedback">
-                {isAWSProject ? <Cloud size={14} /> : <Brain size={14} />}
-                <span className="feedback-text">{isAWSProject ? 'AWS' : 'AI'} Feedback: {skill.verification_feedback}</span>
+                <Brain size={14} />
+                <span className="feedback-text">AI Feedback: {skill.verification_feedback}</span>
               </div>
             )}
           </div>
@@ -519,7 +435,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           {skill.evidence_url && (
             <div className="evidence-indicator">
               <Eye size={16} />
-              <span>{isAWSProject ? 'AWS' : 'AI'}-analyzed in project video</span>
+              <span>AI-analyzed in project video</span>
             </div>
           )}
 
@@ -550,7 +466,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
         <div className="project-info">
           <div className="project-title-section">
             <h1>{project.name}</h1>
-            <span className="project-type">{isAWSProject ? 'AWS-Powered' : 'AI-Powered'} Showcase</span>
+            <span className="project-type">AI-Powered Showcase</span>
           </div>
           <p className="project-description">{project.description}</p>
           {project.goals && <p className="project-goals">Goals: {project.goals}</p>}
@@ -560,29 +476,28 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
       <div className="project-content">
         <div className="content-grid">
           <div className="main-content">
-            {/* AWS/AI-powered video upload section */}
+            {/* AI-powered video upload section */}
             <section className="video-upload-section">
               <div className="section-header">
                 <h2>
-                  {isAWSProject ? <Cloud size={24} /> : <Video size={24} />}
-                  {isAWSProject ? 'AWS-Powered' : 'AI-Powered'} Project Showcase
+                  <Video size={24} />
+                  AI-Powered Project Showcase
                 </h2>
                 <p className="section-description">
-                  Upload your project video for {isAWSProject ? 'AWS Bedrock' : 'AI'} analysis and automatic skill verification
+                  Upload your project video for AI analysis and automatic skill verification
                 </p>
               </div>
               
               {!project.skill_demonstrations.some(s => s.evidence_url) ? (
                 <div className="upload-prompt">
                   <div className="upload-instructions">
-                    <h3>{isAWSProject ? '🚀 AWS-Enhanced' : '🤖 AI-Enhanced'} Multi-Skill Analysis</h3>
-                    <p>Upload a comprehensive video demonstrating all {project.skill_demonstrations.length} skills. Our {isAWSProject ? 'AWS Bedrock AI' : 'advanced AI'} will automatically analyze and verify each skill demonstration.</p>
+                    <h3>🤖 AI-Enhanced Multi-Skill Analysis</h3>
+                    <p>Upload a comprehensive video demonstrating all {project.skill_demonstrations.length} skills. Our advanced AI will automatically analyze and verify each skill demonstration.</p>
                     <ul>
                       <li>Duration: 5-15 minutes total</li>
                       <li>Clearly announce each skill as you demonstrate it</li>
                       <li>Show actual work and explain your approach</li>
-                      <li>{isAWSProject ? 'AWS Bedrock' : 'AI'} will provide detailed feedback and ratings</li>
-                      {isAWSProject && <li>Video securely stored in AWS S3</li>}
+                      <li>AI will provide detailed feedback and ratings</li>
                     </ul>
                   </div>
                   <button 
@@ -590,22 +505,22 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                     onClick={handleProjectVideoUpload}
                     disabled={videoAnalyzing}
                   >
-                    {isAWSProject ? <Cloud size={20} /> : <Upload size={20} />}
-                    Upload for {isAWSProject ? 'AWS' : 'AI'} Analysis
+                    <Upload size={20} />
+                    Upload for AI Analysis
                   </button>
                 </div>
               ) : (
                 <div className="video-status">
                   <CheckCircle size={20} />
                   <div className="status-info">
-                    <span>Video analyzed by {isAWSProject ? 'AWS Bedrock' : 'AI'}</span>
-                    <small>{project.skill_demonstrations.filter(s => s.verified).length} skills {isAWSProject ? 'AWS' : 'AI'}-verified</small>
+                    <span>Video analyzed by AI</span>
+                    <small>{project.skill_demonstrations.filter(s => s.verified).length} skills AI-verified</small>
                   </div>
                   <button 
                     className="btn btn-secondary btn-sm"
                     onClick={handleProjectVideoUpload}
                   >
-                    Re-analyze with {isAWSProject ? 'AWS' : 'AI'}
+                    Re-analyze with AI
                   </button>
                 </div>
               )}
@@ -615,11 +530,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
               <div className="section-header">
                 <h2>
                   <Target size={24} />
-                  {isAWSProject ? 'AWS' : 'AI'}-Verified Skills ({project.skill_demonstrations?.length || 0})
+                  AI-Verified Skills ({project.skill_demonstrations?.length || 0})
                 </h2>
                 <div className="progress-summary">
                   <span>
-                    {project.skill_demonstrations?.filter(s => s.status === 'verified').length || 0} {isAWSProject ? 'AWS' : 'AI'}-verified,
+                    {project.skill_demonstrations?.filter(s => s.status === 'verified').length || 0} AI-verified,
                     {' '}
                     {project.skill_demonstrations?.filter(s => s.status === 'completed').length || 0} completed,
                     {' '}
@@ -635,8 +550,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
 
             <section className="plan-section">
               <h2>
-                {isAWSProject ? <Cloud size={24} /> : <Brain size={24} />}
-                {isAWSProject ? 'AWS' : 'AI'}-Generated Project Plan
+                <Brain size={24} />
+                AI-Generated Project Plan
               </h2>
               <div className="plan-steps">
                 {project.plan?.map((step, index) => (
@@ -646,7 +561,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                       <p>{step}</p>
                     </div>
                   </div>
-                )) || <p>No {isAWSProject ? 'AWS' : 'AI'}-generated plan available</p>}
+                )) || <p>No AI-generated plan available</p>}
               </div>
             </section>
           </div>
@@ -654,35 +569,35 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
           <div className="sidebar">
             <div className="analysis-card">
               <h3>
-                {isAWSProject ? <Cloud size={20} /> : <Brain size={20} />}
-                {isAWSProject ? 'AWS Bedrock' : 'AI'} Analysis Results
+                <Brain size={20} />
+                AI Analysis Results
               </h3>
               <div className="analysis-scores">
                 <div className="score-item">
-                  <span>{isAWSProject ? 'AWS' : 'AI'} Clarity Score</span>
+                  <span>AI Clarity Score</span>
                   <span className="score">{project.analysis?.clarity_score || 0}/10</span>
                 </div>
                 <div className="score-item">
-                  <span>{isAWSProject ? 'AWS' : 'AI'} Feasibility</span>
+                  <span>AI Feasibility</span>
                   <span className="score">{project.analysis?.feasibility_score || 0}/10</span>
                 </div>
               </div>
 
               <div className="analysis-section">
-                <h4>{isAWSProject ? 'AWS' : 'AI'}-Identified Risks</h4>
+                <h4>AI-Identified Risks</h4>
                 <ul className="risk-list">
                   {project.analysis?.identified_risks?.map((risk, index) => (
                     <li key={index}>{risk}</li>
-                  )) || <li>No {isAWSProject ? 'AWS' : 'AI'} risks identified</li>}
+                  )) || <li>No AI risks identified</li>}
                 </ul>
               </div>
 
               <div className="analysis-section">
-                <h4>{isAWSProject ? 'AWS' : 'AI'}-Suggested Technologies</h4>
+                <h4>AI-Suggested Technologies</h4>
                 <div className="tech-tags">
                   {project.analysis?.suggested_technologies?.map((tech, index) => (
                     <span key={index} className="tech-tag">{tech}</span>
-                  )) || <span className="tech-tag">No {isAWSProject ? 'AWS' : 'AI'} suggestions</span>}
+                  )) || <span className="tech-tag">No AI suggestions</span>}
                 </div>
               </div>
             </div>
@@ -690,16 +605,16 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             <div className="reelcv-integration">
               <h3>
                 <Award size={20} />
-                ReelCV Integration
+                ReelApps Integration
               </h3>
-              <p>{isAWSProject ? 'AWS' : 'AI'}-verified skills from this project will automatically appear on your ReelCV profile with {isAWSProject ? 'AWS' : 'AI'} ratings.</p>
+              <p>AI-verified skills from this project will automatically appear on your professional profile with AI ratings.</p>
               
               <div className="integration-stats">
                 <div className="stat">
                   <span className="stat-number">
                     {project.skill_demonstrations?.filter(s => s.verified).length || 0}
                   </span>
-                  <span className="stat-label">{isAWSProject ? 'AWS' : 'AI'}-Verified Skills</span>
+                  <span className="stat-label">AI-Verified Skills</span>
                 </div>
                 <div className="stat">
                   <span className="stat-number">
@@ -708,31 +623,56 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                       '0.0'
                     }
                   </span>
-                  <span className="stat-label">Avg {isAWSProject ? 'AWS' : 'AI'} Rating</span>
+                  <span className="stat-label">Avg AI Rating</span>
                 </div>
               </div>
 
-              <button 
-                className="btn btn-primary full-width"
-                onClick={() => {
-                  const reelCVUrl = window.location.origin.replace(':5177', ':5174');
-                  window.open(reelCVUrl, '_blank', 'noopener,noreferrer');
-                }}
-              >
-                <Eye size={16} />
-                View {isAWSProject ? 'AWS' : 'AI'} Profile on ReelCV
-              </button>
+              <div className="mb-4">
+                <button 
+                  className="btn btn-primary full-width mb-3"
+                  onClick={() => {
+                    window.open('https://reelproject.reelapps.co.za', '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  <Eye size={16} />
+                  View AI Profile on ReelCV
+                </button>
+                
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>
+                    <strong>Explore more ReelApps tools:</strong>
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    <a 
+                      href="https://reelapps.co.za/reelpersona" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      • ReelPersona - Work Personality Assessment
+                    </a>
+                    <a 
+                      href="https://reelapps.co.za/reeltalent" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      • ReelTalent - Find Opportunities
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* AWS/AI-powered video upload modal */}
+      {/* AI-powered video upload modal */}
       {showVideoUploadModal && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
-              <h3>Upload for {isAWSProject ? 'AWS Bedrock' : 'AI'} Analysis</h3>
+              <h3>Upload for AI Analysis</h3>
               <button 
                 className="close-btn"
                 onClick={() => setShowVideoUploadModal(false)}
@@ -743,20 +683,20 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
             
             <div className="modal-content">
               <div className="video-upload-instructions">
-                <h4>{isAWSProject ? '🚀 AWS-Powered' : '🤖 AI-Powered'} Skill Verification</h4>
+                <h4>🤖 AI-Powered Skill Verification</h4>
                 <p className="upload-description">
-                  Upload your project showcase video for advanced {isAWSProject ? 'AWS Bedrock' : 'AI'} analysis. Our {isAWSProject ? 'AWS AI' : 'AI'} will automatically identify, analyze, and verify each skill demonstration with detailed feedback.
+                  Upload your project showcase video for advanced AI analysis. Our AI will automatically identify, analyze, and verify each skill demonstration with detailed feedback.
                 </p>
 
                 <div className="skills-to-demonstrate">
-                  <h5>Skills for {isAWSProject ? 'AWS' : 'AI'} analysis:</h5>
+                  <h5>Skills for AI analysis:</h5>
                   <div className="skill-list">
                     {project?.skill_demonstrations.map((skill, index) => (
                       <div key={skill.id} className="skill-item">
                         <span className="skill-number">{index + 1}</span>
                         <div className="skill-info">
                           <strong>{skill.name}</strong>
-                          <p>{isAWSProject ? 'AWS' : 'AI'} will analyze: {skill.requirements}</p>
+                          <p>AI will analyze: {skill.requirements}</p>
                         </div>
                       </div>
                     ))}
@@ -764,15 +704,14 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                 </div>
 
                 <div className="video-guidelines">
-                  <h5>🎯 {isAWSProject ? 'AWS' : 'AI'} Analysis Guidelines:</h5>
+                  <h5>🎯 AI Analysis Guidelines:</h5>
                   <ul>
                     <li>Keep it between 5-15 minutes total</li>
                     <li>Clearly state which skill you're demonstrating</li>
                     <li>Show your work in action with explanations</li>
-                    <li>{isAWSProject ? 'AWS Bedrock' : 'AI'} will provide detailed ratings and feedback</li>
-                    <li>Use good lighting and audio for better {isAWSProject ? 'AWS' : 'AI'} analysis</li>
-                    <li>Organize sections by skill for optimal {isAWSProject ? 'AWS' : 'AI'} recognition</li>
-                    {isAWSProject && <li>Video will be securely stored in AWS S3</li>}
+                    <li>AI will provide detailed ratings and feedback</li>
+                    <li>Use good lighting and audio for better AI analysis</li>
+                    <li>Organize sections by skill for optimal AI recognition</li>
                   </ul>
                 </div>
               </div>
@@ -786,8 +725,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                   className="file-input"
                 />
                 <label htmlFor="project-video" className="file-upload-label">
-                  {isAWSProject ? <Cloud size={24} /> : <Video size={24} />}
-                  <span>{projectVideo ? projectVideo.name : `Choose video file for ${isAWSProject ? 'AWS' : 'AI'} analysis`}</span>
+                  <Video size={24} />
+                  <span>{projectVideo ? projectVideo.name : 'Choose video file for AI analysis'}</span>
                   <small>Supported formats: MP4, MOV, AVI, WebM</small>
                 </label>
               </div>
@@ -807,12 +746,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ projects }) => {
                   {uploadingVideo ? (
                     <>
                       <div className="spinner"></div>
-                      {isAWSProject ? 'AWS' : 'AI'} Analyzing...
+                      AI Analyzing...
                     </>
                   ) : (
                     <>
-                      {isAWSProject ? <Cloud size={16} /> : <Upload size={16} />}
-                      Upload & {isAWSProject ? 'AWS' : 'AI'} Analyze
+                      <Upload size={16} />
+                      Upload & AI Analyze
                     </>
                   )}
                 </button>

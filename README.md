@@ -1,17 +1,24 @@
-# ReelProjects
+# ReelProject
 
-Part of the ReelApps ecosystem - AI-powered talent acquisition platform.
+Part of the ReelApps ecosystem - AI-powered project management and skill verification platform.
 
 ## About
-ReelProjects is the project showcase platform, providing comprehensive project management, AI-powered collaboration suggestions, and professional project presentations.
+ReelProject is the project showcase platform within the [ReelApps.co.za](https://reelapps.co.za) ecosystem, providing comprehensive project management, AI-powered skill analysis, and professional project presentations with automated skill verification.
 
 ## Features
-- **Project Creation & Management**: Complete project lifecycle management
-- **AI-Powered Project Planning**: Intelligent project scope analysis and planning
-- **Collaboration Suggestions**: Smart team member recommendations based on skills
+- **AI-Powered Project Creation**: Intelligent project scope analysis and planning
+- **Automated Skill Verification**: AI analysis of project demonstrations
 - **Professional Showcases**: Portfolio-ready project presentations
 - **Progress Tracking**: Milestone management and completion tracking
-- **Team Integration**: Seamless collaboration features with skill-based matching
+- **ReelApps Integration**: Seamless integration with the complete professional development platform
+
+## ReelApps Ecosystem
+ReelProject is part of the comprehensive [ReelApps.co.za](https://reelapps.co.za) professional development platform:
+
+- **[ReelCV](https://reelproject.reelapps.co.za)** - Professional profile and CV builder
+- **[ReelPersona](https://reelapps.co.za/reelpersona)** - Work personality assessment and analysis
+- **[ReelTalent](https://reelapps.co.za/reeltalent)** - Talent acquisition and job matching
+- **ReelProject** - Project management and skill verification
 
 ## Development
 ```bash
@@ -19,16 +26,16 @@ npm install
 npm run dev
 ```
 
-## Build
-```bash
-npm run build
-```
-
 ## Environment Setup
 ```bash
 # Supabase Configuration (Required)
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+## Build
+```bash
+npm run build
 ```
 
 ## Shared Packages
@@ -40,7 +47,10 @@ This app uses shared packages from the [@reelapps organization](https://github.c
 - @reelapps/supabase - Database client
 
 ## Deployment
-This repository is configured for deployment to `reelprojects.reelapp.co.za`
+This repository is configured for deployment to `reelproject.reelapps.co.za`
+
+## SEO & Marketing
+ReelProject is optimized for search engines with strategic links to the main [ReelApps.co.za](https://reelapps.co.za) platform and related services, helping users discover the complete professional development ecosystem.
 
 ## License
-MIT - Part of ReelApps ecosystem
+MIT - Part of [ReelApps.co.za](https://reelapps.co.za) ecosystem
