@@ -6,7 +6,7 @@ import { AppWrapper } from './components/AppWrapper'
 import CreateProjectForm from './components/CreateProjectForm'
 import ProjectDetailView from './components/ProjectDetailView'
 import { getSupabaseClient } from './lib/auth'
-import { LogOut, User } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import './App.css'
 
 interface Project {
@@ -223,46 +223,6 @@ function ProjectListView({ projects, onAddProject, isLoading }: {
   );
 }
 
-function UserHeader({ user, onLogout }: { user: any, onLogout: () => void }) {
-  return (
-    <div className="bg-gray-800 border-b border-gray-700 px-8 py-4">
-      <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-            <User size={16} className="text-white" />
-          </div>
-          <div>
-            <p className="text-white font-medium">{user.email}</p>
-            <p className="text-gray-400 text-sm">ReelApps Professional</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-400">
-            <a 
-              href="https://reelcv.reelapps.co.za" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              View Profile on ReelCV
-            </a>
-          </div>
-          
-          <button
-            onClick={onLogout}
-            className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-            title="Sign out"
-          >
-            <LogOut size={16} />
-            <span className="text-sm">Sign Out</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function App() {
   const {
     initialize,
@@ -468,8 +428,18 @@ function App() {
       onPasswordReset={sendPasswordResetEmail}
       isLoading={isLoading ?? false}
     >
-      {isAuthenticated && user && (
-        <UserHeader user={user} onLogout={handleLogout} />
+      {/* Simple Logout Button - positioned in top right */}
+      {isAuthenticated && (
+        <div className="fixed top-4 right-4 z-50">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-600 rounded-lg transition-colors shadow-lg"
+            title="Sign out"
+          >
+            <LogOut size={16} />
+            <span className="text-sm">Sign Out</span>
+          </button>
+        </div>
       )}
       
       <Routes>
